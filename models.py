@@ -2,6 +2,7 @@ from datetime import datetime
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from enum import Enum
+from sqlalchemy import Numeric
 
 class UserRole(Enum):
     STUDENT = "student"
@@ -72,7 +73,7 @@ class Course(db.Model):
     description = db.Column(db.Text)
     short_description = db.Column(db.String(500))
     instructor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    price = db.Column(db.Decimal(10, 2), nullable=False)
+    price = db.Column(Numeric(10, 2), nullable=False)
     currency = db.Column(db.String(3), default='USD')
     duration_hours = db.Column(db.Integer)
     difficulty_level = db.Column(db.String(20))  # beginner, intermediate, advanced
@@ -247,7 +248,7 @@ class Payment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
-    amount = db.Column(db.Decimal(10, 2), nullable=False)
+    amount = db.Column(Numeric(10, 2), nullable=False)
     currency = db.Column(db.String(3), default='USD')
     status = db.Column(db.Enum(PaymentStatus), default=PaymentStatus.PENDING)
     stripe_payment_intent_id = db.Column(db.String(255))
