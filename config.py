@@ -1,9 +1,14 @@
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 class Config:
     # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'postgresql://localhost/aifa_academy')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'postgresql://localhost/Aifa') 
+    # SQLALCHEMY_DATABASE_URI = 'sqlite:///aifa_academy.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_recycle": 300,

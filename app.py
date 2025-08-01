@@ -9,6 +9,10 @@ from flask_cors import CORS
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 from config import Config
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)

@@ -5,14 +5,21 @@ from app import db
 from models import User, UserRole, TokenBlacklist
 from utils.validators import validate_email, validate_password
 import re
+import os 
+from werkzeug.utils import secure_filename
 
 auth_bp = Blueprint('auth', __name__)
+
+UPLOAD_FOLDER = 'static/uploads/'
+ALLOWED_EXTENSIONS_PROFILES = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS_PROFILES
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
     try:
         data = request.get_json()
-        
         # Validate required fields
         required_fields = ['email', 'password', 'first_name', 'last_name']
         for field in required_fields:
@@ -30,6 +37,17 @@ def register():
         # Check if user already exists
         if User.query.filter_by(email=data['email'].lower()).first():
             return jsonify({'error': 'Email already registered'}), 409
+        
+        
+        
+        #     # Handle file upload
+        # file = request.files.get('profile_pic')
+        # profile_path = None
+        # if file and allowed_file(file.filename):
+        #     filename = secure_filename(file.filename)
+        #     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        #     profile_path = os.path.join(UPLOAD_FOLDER,"instructors", filename)
+        #     file.save(profile_path)
         
         # Create new user
         user = User(

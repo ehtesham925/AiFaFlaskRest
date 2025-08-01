@@ -1,0 +1,57 @@
+# Bytecode files
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+
+# VSCode or IDE settings
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Database
+*.sqlite3
+instance/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Compiled files
+*.so
+*.egg-info/
+
+# Pytest cache
+.pytest_cache/
+
+
+# Ignore the entire instance folder
+instance/
+
+
+# ignore assests
+assets/
+
+# Ignore migrations folder
+migrations/
+
+
+# ignore static folder
+static/uploads
+
+
+attached_assets/
+instance/
+
+.replit
+
+
