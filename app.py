@@ -24,7 +24,7 @@ db = SQLAlchemy(model_class=Base)
 migrate = Migrate()
 jwt = JWTManager()
 mail = Mail()
-cors = CORS()
+
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL")
 def create_app(config_class=Config):
@@ -39,19 +39,21 @@ def create_app(config_class=Config):
     jwt.init_app(app)
     mail.init_app(app)
     
-    # Configure CORS
-    cors.init_app(app, resources={
-        r"/*": {
-            "origins": [
-                "http://localhost:5173",  # Default React dev server
-                "http://127.0.0.1:3000",  # Alternative local address
-                FRONTEND_URL  # Your future production frontend
-            ],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True  # If using cookies/auth
-        }
-    })
+    # Configure 
+    CORS(app)
+
+    # cors.init_app(app, resources={
+    #     r"/*": {
+    #         "origins": [
+    #             "http://localhost:5173",  # Default React dev server
+    #             "http://127.0.0.1:3000",  # Alternative local address
+    #             FRONTEND_URL  # Your future production frontend
+    #         ],
+    #         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    #         "allow_headers": ["Content-Type", "Authorization"],
+    #         "supports_credentials": True  # If using cookies/auth
+    #     }
+    # })
     
     # Register blueprints
     from routes.auth_routes import auth_bp
