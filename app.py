@@ -24,7 +24,7 @@ db = SQLAlchemy(model_class=Base)
 migrate = Migrate()
 jwt = JWTManager()
 mail = Mail()
-
+cors = CORS()
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL")
 def create_app(config_class=Config):
@@ -40,20 +40,22 @@ def create_app(config_class=Config):
     mail.init_app(app)
     
     # Configure 
-    CORS(app)
+    # CORS(app)
 
-    # cors.init_app(app, resources={
-    #     r"/*": {
-    #         "origins": [
-    #             "http://localhost:5173",  # Default React dev server
-    #             "http://127.0.0.1:3000",  # Alternative local address
-    #             FRONTEND_URL  # Your future production frontend
-    #         ],
-    #         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    #         "allow_headers": ["Content-Type", "Authorization"],
-    #         "supports_credentials": True  # If using cookies/auth
-    #     }
-    # })
+    cors.init_app(app, resources={
+        r"/*": {
+            "origins": [
+                "http://localhost:5173",  # Default React dev server
+                "http://localhost:5174",  # Default React dev server
+                "http://127.0.0.1:3000",  # Alternative local address
+                FRONTEND_URL  # Your future production frontend
+            ],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True,
+              # If using cookies/auth
+        }
+    })
     
     # Register blueprints
     from routes.auth_routes import auth_bp
@@ -65,6 +67,7 @@ def create_app(config_class=Config):
     from routes.notification_routes import notification_bp
     from routes.certificate_routes import certificate_bp
     from routes.live_session_routes import live_session_bp
+    from routes.helper_routes import helper_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')
     app.register_blueprint(user_bp, url_prefix='/api/v1/users')
@@ -75,7 +78,7 @@ def create_app(config_class=Config):
     app.register_blueprint(notification_bp, url_prefix='/api/v1/notifications')
     app.register_blueprint(certificate_bp, url_prefix='/api/v1/certificates')
     app.register_blueprint(live_session_bp, url_prefix='/api/v1/live-sessions')
-    
+    app.register_blueprint(helper_bp,url_prefix='/api/v1/helper/')
     # Create tables
     with app.app_context():
         import models  # noqa: F401
