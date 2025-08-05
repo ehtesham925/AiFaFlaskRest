@@ -10,6 +10,7 @@ from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 from config import Config
 from dotenv import load_dotenv
+from flasgger import Swagger
 
 load_dotenv()
 
@@ -48,7 +49,7 @@ def create_app(config_class=Config):
                 "http://localhost:5173",  # Default React dev server
                 "http://localhost:5174",  # Default React dev server
                 "http://127.0.0.1:3000",  # Alternative local address
-                FRONTEND_URL  # Your future production frontend
+                  # Your future production frontend
             ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
