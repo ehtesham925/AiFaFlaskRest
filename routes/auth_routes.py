@@ -37,7 +37,16 @@ def register():
         # Check if user already exists
         if User.query.filter_by(email=data['email'].lower()).first():
             return jsonify({'error': 'Email already registered'}), 409
-        
+             
+                # Handle role safely
+        if data.get('role'):
+            try:
+                role = UserRole(data['role'].lower())
+            except ValueError:
+                return jsonify({'error': f"Invalid role: {data['role']}"}), 400
+        else:
+            role = UserRole.STUDENT
+
         
         
         #     # Handle file upload
@@ -54,7 +63,7 @@ def register():
             email=data['email'].lower(),
             first_name=data['first_name'],
             last_name=data['last_name'],
-            role=UserRole.STUDENT,
+            role=role,
             phone=data.get('phone'),
             bio=data.get('bio')
         )

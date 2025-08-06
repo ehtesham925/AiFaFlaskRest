@@ -421,3 +421,15 @@ def promote_to_instructor(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/users/all', methods=['GET'])
+def get_all_userstest():
+    try:
+        users = User.query.all()
+        return jsonify({
+            "users": [user.to_dict() for user in users],
+            "count": len(users)
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -9,6 +9,11 @@ def admin_required(f):
         verify_jwt_in_request()
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
+
+        print(user.role, UserRole.ADMIN)
+        print(type(user.role), type(UserRole.ADMIN))
+        print(user.role == UserRole.ADMIN)
+
         
         if not user or user.role != UserRole.ADMIN:
             return jsonify({'error': 'Admin access required'}), 403
