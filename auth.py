@@ -9,11 +9,6 @@ def admin_required(f):
         verify_jwt_in_request()
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
-
-        print(user.role, UserRole.ADMIN)
-        print(type(user.role), type(UserRole.ADMIN))
-        print(user.role == UserRole.ADMIN)
-
         
         if not user or user.role != UserRole.ADMIN:
             return jsonify({'error': 'Admin access required'}), 403
@@ -29,7 +24,7 @@ def instructor_required(f):
         user = User.query.get(current_user_id)
         
         if not user or user.role not in [UserRole.INSTRUCTOR, UserRole.ADMIN]:
-            return jsonify({'error': 'Instructor access required'}), 403
+            return jsonify({'error': 'Instructor/Admin access required'}), 403
         
         return f(*args, **kwargs)
     return decorated_function

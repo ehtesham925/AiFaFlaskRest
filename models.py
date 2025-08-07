@@ -82,6 +82,7 @@ class Course(db.Model):
     max_students = db.Column(db.Integer)
     prerequisites = db.Column(db.Text)
     learning_outcomes = db.Column(db.Text)
+    # banner_picture = db.Column(db.String(255),nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

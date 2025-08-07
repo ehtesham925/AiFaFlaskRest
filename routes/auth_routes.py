@@ -155,38 +155,38 @@ def logout():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@auth_bp.route('/change-password', methods=['POST'])
-@jwt_required()
-def change_password():
-    try:
-        data = request.get_json()
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
-        
-        # Validate required fields
-        if not data.get('current_password') or not data.get('new_password'):
-            return jsonify({'error': 'Current password and new password are required'}), 400
-        
-        # Check current password
-        if not user.check_password(data['current_password']):
-            return jsonify({'error': 'Current password is incorrect'}), 401
-        
-        # Validate new password
-        if not validate_password(data['new_password']):
-            return jsonify({'error': 'New password must be at least 8 characters long and contain uppercase, lowercase, digit and special character'}), 400
-        
-        # Update password
-        user.set_password(data['new_password'])
-        db.session.commit()
-        
-        return jsonify({'message': 'Password changed successfully'}), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    @auth_bp.route('/change-password', methods=['POST'])
+    @jwt_required()
+    def change_password():
+        try:
+            data = request.get_json()
+            current_user_id = get_jwt_identity()
+            user = User.query.get(current_user_id)
+            
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            # Validate required fields
+            if not data.get('current_password') or not data.get('new_password'):
+                return jsonify({'error': 'Current password and new password are required'}), 400
+            
+            # Check current password
+            if not user.check_password(data['current_password']):
+                return jsonify({'error': 'Current password is incorrect'}), 401
+            
+            # Validate new password
+            if not validate_password(data['new_password']):
+                return jsonify({'error': 'New password must be at least 8 characters long and contain uppercase, lowercase, digit and special character'}), 400
+            
+            # Update password
+            user.set_password(data['new_password'])
+            db.session.commit()
+            
+            return jsonify({'message': 'Password changed successfully'}), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/me', methods=['GET'])
 @jwt_required()

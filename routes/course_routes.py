@@ -4,8 +4,18 @@ from app import db
 from models import Course, CourseModule, Lesson, User, Enrollment, UserRole, CourseStatus
 from auth import get_current_user, instructor_required
 from utils.validators import validate_course_data
+from werkzeug.utils import secure_filename
+import uuid 
+import os 
 
 course_bp = Blueprint('courses', __name__)
+
+
+UPLOAD_FOLDER = 'static/uploads/thumbnails'  # Or wherever you want
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @course_bp.route('/', methods=['GET'])
 def get_courses():
@@ -89,41 +99,54 @@ def get_course(course_id):
 def create_course():
     try:
         user = get_current_user()
-        data = request.get_json()
-        
-        # Validate course data
-        validation_error = validate_course_data(data)
-        if validation_error:
-            return jsonify({'error': validation_error}), 400
-        
+        data = request.form  # ✅ Get non-file fields from form data
+        file = request.files.get('thumbnail')  # ✅ Get uploaded file
+
+        # Optional: validate required fields
+        required_fields = ['title', 'price']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'{field} is required'}), 400
+
+        # Handle thumbnail upload if provided
+        thumbnail_path = None
+        if file and allowed_file(file.filename):  # Make sure `allowed_file` checks file extension
+            filename = secure_filename(file.filename)
+            unique_filename = f"{uuid.uuid4().hex}_{filename}"
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+            filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
+            file.save(filepath)
+            thumbnail_path = filepath
+
         # Create course
         course = Course(
-            title=data['title'],
+            title=data.get('title'),
             description=data.get('description'),
             short_description=data.get('short_description'),
             instructor_id=user.id,
-            price=data['price'],
+            price=float(data.get('price')),
             currency=data.get('currency', 'USD'),
             duration_hours=data.get('duration_hours'),
             difficulty_level=data.get('difficulty_level'),
-            thumbnail=data.get('thumbnail'),
-            max_students=data.get('max_students'),
+            thumbnail=thumbnail_path,
+            max_students=int(data.get('max_students', 0)) if data.get('max_students') else None,
             prerequisites=data.get('prerequisites'),
             learning_outcomes=data.get('learning_outcomes'),
             status=CourseStatus.DRAFT
         )
-        
+
         db.session.add(course)
         db.session.commit()
-        
+
         return jsonify({
             'message': 'Course created successfully',
             'course': course.to_dict(include_modules=True)
         }), 201
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
 
 @course_bp.route('/<int:course_id>', methods=['PUT'])
 @instructor_required
