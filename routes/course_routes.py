@@ -15,28 +15,41 @@ UPLOAD_FOLDER = 'static/uploads/thumbnails'  # Or wherever you want
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
+    global ALLOWED_EXTENSIONS
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@course_bp.route('/', methods=['GET'])
+@course_bp.route('get-courses/', methods=['POST'])
 def get_courses():
     try:
+        data = request.get_json()
+        types = ["published", "draft", "archived"]
+        status = data.get('status', '').lower()
+
+        # Start with base query
+        query = Course.query
+
+        # Status filtering
+        if status:
+            if status in types:
+                query = query.filter_by(status=CourseStatus(status))
+            elif status != 'all':
+                return {"error": f"Invalid status: {status}"}
+
+        # Optional filters
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
         difficulty = request.args.get('difficulty')
         instructor_id = request.args.get('instructor_id', type=int)
         search = request.args.get('search')
-        
-        # Build query
-        query = Course.query.filter_by(status=CourseStatus.PUBLISHED)
-        
+
         if difficulty:
             query = query.filter_by(difficulty_level=difficulty)
-        
+
         if instructor_id:
             query = query.filter_by(instructor_id=instructor_id)
-        
+
         if search:
-            search_term = f'%{search}%'
+            search_term = f"%{search}%"
             query = query.filter(
                 db.or_(
                     Course.title.ilike(search_term),
@@ -44,12 +57,12 @@ def get_courses():
                     Course.short_description.ilike(search_term)
                 )
             )
-        
-        # Execute query with pagination
+
+        # Final query execution
         courses = query.order_by(Course.created_at.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
-        
+
         return jsonify({
             'courses': [course.to_dict() for course in courses.items],
             'pagination': {
@@ -61,9 +74,10 @@ def get_courses():
                 'has_prev': courses.has_prev
             }
         }), 200
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 @course_bp.route('/<int:course_id>', methods=['GET'])
 def get_course(course_id):
@@ -94,7 +108,7 @@ def get_course(course_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@course_bp.route('/', methods=['POST'])
+@course_bp.route('create-courses/', methods=['POST'])
 # @instructor_required
 def create_course():
     try:
@@ -110,6 +124,7 @@ def create_course():
 
         # Handle thumbnail upload if provided
         thumbnail_path = None
+        global UPLOAD_FOLDER
         if file and allowed_file(file.filename):  # Make sure `allowed_file` checks file extension
             filename = secure_filename(file.filename)
             unique_filename = f"{uuid.uuid4().hex}_{filename}"
@@ -119,9 +134,8 @@ def create_course():
             thumbnail_path = filepath
 
         
-        print(data.get('status'),CourseStatus(data['status']))
-        # return {"done"}
-
+        # print(data.get('status'),CourseStatus(data['status']))
+       
                 # Handle role safely
         if data.get('status'):
             try:

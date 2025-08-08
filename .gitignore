@@ -46,7 +46,7 @@ migrations/
 
 
 # ignore static folder
-static/uploads
+/static/uploads/thumbnails/*
 
 
 attached_assets/
