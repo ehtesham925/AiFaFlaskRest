@@ -118,6 +118,15 @@ def create_course():
             file.save(filepath)
             thumbnail_path = filepath
 
+                # Handle role safely
+        if data.get('status'):
+            try:
+                status = CourseStatus(data['status'].lower())
+            except ValueError:
+                return jsonify({'error': f"Invalid role: {data['role']}"}), 400
+        else:
+            status = CourseStatus.DRAFT
+
         # Create course
         course = Course(
             title=data.get('title'),
@@ -131,8 +140,8 @@ def create_course():
             thumbnail=thumbnail_path,
             max_students=int(data.get('max_students', 0)) if data.get('max_students') else None,
             prerequisites=data.get('prerequisites'),
+            status=status,
             learning_outcomes=data.get('learning_outcomes'),
-            status=CourseStatus.DRAFT
         )
 
         db.session.add(course)
