@@ -11,7 +11,7 @@ import os
 course_bp = Blueprint('courses', __name__)
 
 
-UPLOAD_FOLDER = 'static/uploads/thumbnails/.gitkeep'  # Or wherever you want
+UPLOAD_FOLDER = 'static/uploads/thumbnails/'  # Or wherever you want
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
@@ -109,7 +109,7 @@ def get_course(course_id):
         return jsonify({'error': str(e)}), 500
 
 @course_bp.route('create-courses/', methods=['POST'])
-@instructor_required
+# @instructor_required
 def create_course():
     try:
         user = get_current_user()
@@ -227,7 +227,7 @@ def update_course(course_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
+   
 @course_bp.route('/<int:course_id>', methods=['DELETE'])
 @instructor_required
 def delete_course(course_id):
