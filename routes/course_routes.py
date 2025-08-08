@@ -11,7 +11,7 @@ import os
 course_bp = Blueprint('courses', __name__)
 
 
-UPLOAD_FOLDER = 'static/uploads/thumbnails'  # Or wherever you want
+UPLOAD_FOLDER = 'static/uploads/thumbnails/.gitkeep'  # Or wherever you want
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
@@ -109,7 +109,7 @@ def get_course(course_id):
         return jsonify({'error': str(e)}), 500
 
 @course_bp.route('create-courses/', methods=['POST'])
-# @instructor_required
+@instructor_required
 def create_course():
     try:
         user = get_current_user()
@@ -266,7 +266,7 @@ def create_module(course_id):
             return jsonify({'error': 'Course not found'}), 404
         
         # Check if user owns the course or is admin
-        if course.instructor_id != user.id and user.role != UserRole.ADMIN:
+        if course.instructor_id != user.id and user.role != UserRole.ADMIN :
             return jsonify({'error': 'Unauthorized to modify this course'}), 403
         
         data = request.get_json()
