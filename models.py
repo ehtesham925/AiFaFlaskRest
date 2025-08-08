@@ -159,6 +159,7 @@ class Lesson(db.Model):
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text)
     video_url = db.Column(db.String(500))
+    resource_link = db.Column(db.String(255))
     duration_minutes = db.Column(db.Integer)
     order = db.Column(db.Integer, nullable=False)
     is_preview = db.Column(db.Boolean, default=False)

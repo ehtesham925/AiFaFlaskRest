@@ -95,7 +95,7 @@ def get_course(course_id):
         return jsonify({'error': str(e)}), 500
 
 @course_bp.route('/', methods=['POST'])
-@instructor_required
+# @instructor_required
 def create_course():
     try:
         user = get_current_user()
@@ -117,6 +117,10 @@ def create_course():
             filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
             file.save(filepath)
             thumbnail_path = filepath
+
+        
+        print(data.get('status'),CourseStatus(data['status']))
+        # return {"done"}
 
                 # Handle role safely
         if data.get('status'):
