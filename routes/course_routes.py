@@ -173,10 +173,8 @@ def create_course():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
-
 @course_bp.route('/<int:course_id>', methods=['PUT'])
-@instructor_required
+# @instructor_required
 def update_course(course_id):
     try:
         user = get_current_user()
@@ -184,50 +182,67 @@ def update_course(course_id):
         
         if not course:
             return jsonify({'error': 'Course not found'}), 404
-        
-        # Check if user owns the course or is admin
-        if course.instructor_id != user.id and user.role != UserRole.ADMIN:
+
+        # ✅ Allow Admin to update any course, Instructor only their own
+        if not (
+            user.role == UserRole.ADMIN or
+            (user.role == UserRole.INSTRUCTOR and course.instructor_id == user.id)
+        ):
             return jsonify({'error': 'Unauthorized to update this course'}), 403
-        
-        data = request.get_json()
-        
-        # Update course fields
-        if 'title' in data:
+
+        # ✅ Support form data + file upload
+        data = request.form
+        file = request.files.get('thumbnail')
+
+        # Update text/number fields if present
+        if data.get('title'):
             course.title = data['title']
-        if 'description' in data:
+        if data.get('description'):
             course.description = data['description']
-        if 'short_description' in data:
+        if data.get('short_description'):
             course.short_description = data['short_description']
-        if 'price' in data:
-            course.price = data['price']
-        if 'currency' in data:
+        if data.get('price'):
+            course.price = float(data['price'])
+        if data.get('currency'):
             course.currency = data['currency']
-        if 'duration_hours' in data:
+        if data.get('duration_hours'):
             course.duration_hours = data['duration_hours']
-        if 'difficulty_level' in data:
+        if data.get('difficulty_level'):
             course.difficulty_level = data['difficulty_level']
-        if 'thumbnail' in data:
-            course.thumbnail = data['thumbnail']
-        if 'max_students' in data:
-            course.max_students = data['max_students']
-        if 'prerequisites' in data:
+        if data.get('max_students'):
+            course.max_students = int(data['max_students'])
+        if data.get('prerequisites'):
             course.prerequisites = data['prerequisites']
-        if 'learning_outcomes' in data:
+        if data.get('learning_outcomes'):
             course.learning_outcomes = data['learning_outcomes']
-        if 'status' in data and user.role == UserRole.ADMIN:
-            course.status = CourseStatus(data['status'])
-        
+
+        # ✅ Handle status update for Admin and Instructor
+        if data.get('status') and user.role in [UserRole.ADMIN, UserRole.INSTRUCTOR]:
+            try:
+                course.status = CourseStatus(data['status'].lower())
+            except ValueError:
+                return jsonify({'error': f"Invalid status: {data['status']}"}), 400
+
+        # ✅ Handle thumbnail upload (optional)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            unique_filename = f"{uuid.uuid4().hex}_{filename}"
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+            filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
+            file.save(filepath)
+            course.thumbnail = filepath  # update thumbnail path
+
         db.session.commit()
-        
+
         return jsonify({
             'message': 'Course updated successfully',
             'course': course.to_dict(include_modules=True)
         }), 200
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-   
+
 @course_bp.route('/<int:course_id>', methods=['DELETE'])
 @instructor_required
 def delete_course(course_id):
