@@ -32,6 +32,8 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
     app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+    app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # Example: 500 MB limit
+
     
     # Initialize extensions
     db.init_app(app)

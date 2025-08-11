@@ -189,7 +189,7 @@ class LessonResource(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     lesson_id = db.Column(db.Integer, db.ForeignKey('lessons.id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
-    file_path = db.Column(db.String(500), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False) # resources pdf, vedio, audio etc 
     file_type = db.Column(db.String(50))  # pdf, video, audio, image, etc.
     file_size = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

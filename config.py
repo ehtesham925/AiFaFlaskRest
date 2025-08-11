@@ -35,6 +35,7 @@ class Config:
     # File upload configuration
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    # In Flask app config
     
     # Rate limiting
     RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL', 'memory://')

@@ -18,6 +18,14 @@ def allowed_file(filename):
     global ALLOWED_EXTENSIONS
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
+ALLOWED_VIDEO_EXTENSIONS_LESSONS = {'mp4', 'avi', 'mov', 'mkv'}
+UPLOAD_FOLDER_lessons = 'uploads'
+
+def allowed_file_lessons(filename, allowed_extensions):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+# get courses 
 @course_bp.route('get-courses/', methods=['POST'])
 def get_courses():
     try:
@@ -78,7 +86,7 @@ def get_courses():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-
+# get specific course
 @course_bp.route('/<int:course_id>', methods=['GET'])
 def get_course(course_id):
     try:
@@ -108,6 +116,7 @@ def get_course(course_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# creating courses 
 @course_bp.route('create-courses/', methods=['POST'])
 # @instructor_required
 def create_course():
@@ -173,6 +182,8 @@ def create_course():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+# edit specific course 
 @course_bp.route('/<int:course_id>', methods=['PUT'])
 # @instructor_required
 def update_course(course_id):
@@ -243,6 +254,7 @@ def update_course(course_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+#delete course 
 @course_bp.route('/<int:course_id>', methods=['DELETE'])
 @instructor_required
 def delete_course(course_id):
@@ -270,6 +282,7 @@ def delete_course(course_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+#create modules 
 @course_bp.route('/<int:course_id>/modules', methods=['POST'])
 @instructor_required
 def create_module(course_id):
@@ -311,7 +324,8 @@ def create_module(course_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
+    
+#create lesson 
 @course_bp.route('/<int:course_id>/modules/<int:module_id>/lessons', methods=['POST'])
 @instructor_required
 def create_lesson(course_id, module_id):
@@ -319,40 +333,64 @@ def create_lesson(course_id, module_id):
         user = get_current_user()
         course = Course.query.get(course_id)
         module = CourseModule.query.get(module_id)
-        
+
         if not course or not module or module.course_id != course_id:
             return jsonify({'error': 'Course or module not found'}), 404
-        
+
         # Check if user owns the course or is admin
         if course.instructor_id != user.id and user.role != UserRole.ADMIN:
             return jsonify({'error': 'Unauthorized to modify this course'}), 403
-        
-        data = request.get_json()
-        
-        if not data.get('title'):
+
+        # Handle form data (supports file + text)
+        title = request.form.get('title')
+        content = request.form.get('content')
+        duration_minutes = request.form.get('duration_minutes', type=int)
+        is_preview = request.form.get('is_preview', 'false').lower() == 'true'
+        video_file = request.files.get('video')
+
+
+        if not title:
             return jsonify({'error': 'Lesson title is required'}), 400
-        
+
         # Get next order number
         max_order = db.session.query(db.func.max(Lesson.order)).filter_by(module_id=module_id).scalar() or 0
-        
+
+        # Build safe folder names
+        course_name = secure_filename(course.title)
+        module_name = secure_filename(module.title)
+        lesson_name = secure_filename(title)
+
+        #case 1. local file upload 
+        video_path = None
+        if video_file and allowed_file_lessons(video_file.filename, ALLOWED_VIDEO_EXTENSIONS_LESSONS):
+            video_folder = os.path.join(UPLOAD_FOLDER, course_name, module_name, 'video')
+            os.makedirs(video_folder, exist_ok=True)
+            video_filename = f"{lesson_name}_{secure_filename(video_file.filename)}"
+            video_path = os.path.join(video_folder, video_filename)
+            video_file.save(video_path)
+                
+        # Case 2: YouTube or remote URL
+        # elif request.form.get('video_url'):
+        #     video_path = request.form.get('video_url')
+        # Create lesson entry
         lesson = Lesson(
             module_id=module_id,
-            title=data['title'],
-            content=data.get('content'),
-            video_url=data.get('video_url'),
-            duration_minutes=data.get('duration_minutes'),
+            title=title,
+            content=content,
+            video_url=video_path,
+            duration_minutes=duration_minutes,
             order=max_order + 1,
-            is_preview=data.get('is_preview', False)
+            is_preview=is_preview
         )
-        
         db.session.add(lesson)
         db.session.commit()
-        
+
         return jsonify({
             'message': 'Lesson created successfully',
+            'lesson_id': lesson.id,
             'lesson': lesson.to_dict()
         }), 201
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -420,7 +458,7 @@ def get_course_enrollments(course_id):
         if not course:
             return jsonify({'error': 'Course not found'}), 404
         
-        # Check if user owns the course or is admin
+        # Check if user owns the course or is admin     
         if course.instructor_id != user.id and user.role != UserRole.ADMIN:
             return jsonify({'error': 'Unauthorized to view course enrollments'}), 403
         
@@ -443,4 +481,190 @@ def get_course_enrollments(course_id):
         }), 200
         
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+# get modules 
+@course_bp.route('/<int:course_id>/modules', methods=['GET'])
+@instructor_required
+def list_modules(course_id):
+    try:
+        user = get_current_user()
+        course = Course.query.get(course_id)
+
+        if not course:
+            return jsonify({'error': 'Course not found'}), 404
+
+        # Check role: instructor of the course or admin
+        if course.instructor_id != user.id and user.role != UserRole.ADMIN:
+            return jsonify({'error': 'Unauthorized to view modules for this course'}), 403
+
+        modules = CourseModule.query.filter_by(course_id=course_id).order_by(CourseModule.order).all()
+
+        return jsonify({
+            'course_id': course.id,
+            'course_title': course.title,
+            'modules': [m.to_dict(include_lessons=True) for m in modules]
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# update module 
+@course_bp.route('/<int:course_id>/modules/<int:module_id>', methods=['PUT'])
+@instructor_required
+def update_module(course_id, module_id):
+    try:
+        user = get_current_user()
+        course = Course.query.get(course_id)
+        module = CourseModule.query.get(module_id)
+
+        if not course or not module or module.course_id != course_id:
+            return jsonify({'error': 'Course or module not found'}), 404
+
+        # Check role: instructor of the course or admin
+        if course.instructor_id != user.id and user.role != UserRole.ADMIN:
+            return jsonify({'error': 'Unauthorized to update this module'}), 403
+
+        data = request.get_json()
+
+        if 'title' in data:
+            module.title = data['title']
+        if 'description' in data:
+            module.description = data['description']
+        if 'is_preview' in data:
+            module.is_preview = data['is_preview']
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Module updated successfully',
+            'module': module.to_dict(include_lessons=True)
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+# delete module 
+@course_bp.route('/<int:course_id>/modules/<int:module_id>', methods=['DELETE'])
+@instructor_required
+def delete_module(course_id, module_id):
+    try:
+        user = get_current_user()
+        course = Course.query.get(course_id)
+        module = CourseModule.query.get(module_id)
+
+        if not course or not module or module.course_id != course_id:
+            return jsonify({'error': 'Course or module not found'}), 404
+
+        # Check role: instructor of the course or admin
+        if course.instructor_id != user.id and user.role != UserRole.ADMIN:
+            return jsonify({'error': 'Unauthorized to delete this module'}), 403
+
+        db.session.delete(module)
+        db.session.commit()
+
+        return jsonify({'message': 'Module deleted successfully'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+    
+
+
+
+# get lessons 
+@course_bp.route('/<int:course_id>/modules/<int:module_id>/lessons', methods=['GET'])
+@instructor_required
+def list_lessons(course_id, module_id):
+    try:
+        user = get_current_user()
+        course = Course.query.get(course_id)
+        module = CourseModule.query.get(module_id)
+
+        if not course or not module or module.course_id != course_id:
+            return jsonify({'error': 'Course or module not found'}), 404
+
+        # Role check
+        if course.instructor_id != user.id and user.role != UserRole.ADMIN:
+            return jsonify({'error': 'Unauthorized to view lessons'}), 403
+
+        lessons = Lesson.query.filter_by(module_id=module_id).order_by(Lesson.order).all()
+
+        return jsonify({
+            'module_id': module.id,
+            'module_title': module.title,
+            'lessons': [lesson.to_dict() for lesson in lessons]
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# update lesson 
+@course_bp.route('/<int:course_id>/modules/<int:module_id>/lessons/<int:lesson_id>', methods=['PUT'])
+@instructor_required
+def update_lesson(course_id, module_id, lesson_id):
+    try:
+        user = get_current_user()
+        course = Course.query.get(course_id)
+        module = CourseModule.query.get(module_id)
+        lesson = Lesson.query.get(lesson_id)
+
+        if not course or not module or not lesson or module.course_id != course_id or lesson.module_id != module_id:
+            return jsonify({'error': 'Course, module, or lesson not found'}), 404
+
+        # Role check
+        if course.instructor_id != user.id and user.role != UserRole.ADMIN:
+            return jsonify({'error': 'Unauthorized to update this lesson'}), 403
+
+        data = request.form if request.form else request.get_json()
+
+        if 'title' in data and data['title']:
+            lesson.title = data['title']
+        if 'content' in data:
+            lesson.content = data['content']
+        if 'duration_minutes' in data:
+            lesson.duration_minutes = int(data['duration_minutes'])
+        if 'is_preview' in data:
+            lesson.is_preview = str(data['is_preview']).lower() == 'true'
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Lesson updated successfully',
+            'lesson': lesson.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+# delete lesson 
+@course_bp.route('/<int:course_id>/modules/<int:module_id>/lessons/<int:lesson_id>', methods=['DELETE'])
+@instructor_required
+def delete_lesson(course_id, module_id, lesson_id):
+    try:
+        user = get_current_user()
+        course = Course.query.get(course_id)
+        module = CourseModule.query.get(module_id)
+        lesson = Lesson.query.get(lesson_id)
+
+        if not course or not module or not lesson or module.course_id != course_id or lesson.module_id != module_id:
+            return jsonify({'error': 'Course, module, or lesson not found'}), 404
+
+        # Role check
+        if course.instructor_id != user.id and user.role != UserRole.ADMIN:
+            return jsonify({'error': 'Unauthorized to delete this lesson'}), 403
+
+        db.session.delete(lesson)
+        db.session.commit()
+
+        return jsonify({'message': 'Lesson deleted successfully'}), 200
+
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500

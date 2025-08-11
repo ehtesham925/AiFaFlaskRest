@@ -15,6 +15,7 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# upload lesson resource 
 @file_bp.route('/upload', methods=['POST'])
 @instructor_required
 def upload_file():
@@ -72,6 +73,7 @@ def upload_file():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# download lesson resource 
 @file_bp.route('/download/<int:resource_id>', methods=['GET'])
 @jwt_required()
 def download_file(resource_id):
@@ -201,6 +203,7 @@ def upload_profile_picture():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# getting lesson resources 
 @file_bp.route('/lesson-resources/<int:lesson_id>', methods=['GET'])
 @jwt_required()
 def get_lesson_resources(lesson_id):
@@ -245,6 +248,8 @@ def get_lesson_resources(lesson_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+# deleting lesson resources 
 @file_bp.route('/resources/<int:resource_id>', methods=['DELETE'])
 @instructor_required
 def delete_resource(resource_id):

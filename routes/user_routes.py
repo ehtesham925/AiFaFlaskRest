@@ -7,6 +7,7 @@ from utils.validators import validate_email
 
 user_bp = Blueprint('users', __name__)
 
+# get profile details 
 @user_bp.route('/profile', methods=['GET'])
 @jwt_required()
 def get_profile():
@@ -20,6 +21,7 @@ def get_profile():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# update user details 
 @user_bp.route('/profile', methods=['PUT'])
 @jwt_required()
 def update_profile():
@@ -66,6 +68,7 @@ def update_profile():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+#ger enrollments 
 @user_bp.route('/enrollments', methods=['GET'])
 @jwt_required()
 def get_enrollments():
@@ -86,7 +89,8 @@ def get_enrollments():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
+    
+# create enrollments 
 @user_bp.route('/enrollments/<int:course_id>', methods=['POST'])
 @jwt_required()
 def enroll_course(course_id):
@@ -131,6 +135,8 @@ def enroll_course(course_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+# get enrollment details 
 @user_bp.route('/enrollments/<int:course_id>/progress', methods=['GET'])
 @jwt_required()
 def get_course_progress(course_id):
@@ -165,6 +171,7 @@ def get_course_progress(course_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Create enrollment progress 
 @user_bp.route('/enrollments/<int:course_id>/lessons/<int:lesson_id>/progress', methods=['POST'])
 @jwt_required()
 def update_lesson_progress(course_id, lesson_id):
