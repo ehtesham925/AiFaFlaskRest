@@ -26,7 +26,7 @@ jwt = JWTManager()
 mail = Mail()
 cors = CORS()
 
-FRONTEND_URL = os.environ.get("FRONTEND_URL")
+FRONTEND_URL_STUDENTS = os.environ.get("FRONTEND_URL_STUDENTS")
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -50,7 +50,8 @@ def create_app(config_class=Config):
                 "http://localhost:5173",  # Default React dev server
                 "http://localhost:5174",  # Default React dev server
                 "http://127.0.0.1:3000",  # Alternative local address
-                  # Your future production frontend
+                 FRONTEND_URL_STUDENTS ,                      # Your future production frontend
+                   
             ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
