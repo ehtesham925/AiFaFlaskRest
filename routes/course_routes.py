@@ -333,6 +333,7 @@ def create_lesson(course_id, module_id):
         user = get_current_user()
         course = Course.query.get(course_id)
         module = CourseModule.query.get(module_id)
+        data = request.get_data()
 
         if not course or not module or module.course_id != course_id:
             return jsonify({'error': 'Course or module not found'}), 404
@@ -348,6 +349,7 @@ def create_lesson(course_id, module_id):
         is_preview = request.form.get('is_preview', 'false').lower() == 'true'
         video_file = request.files.get('video')
 
+        print("title",title)
 
         if not title:
             return jsonify({'error': 'Lesson title is required'}), 400
@@ -448,6 +450,7 @@ def publish_course(course_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# get enrollments for specific course id 
 @course_bp.route('/<int:course_id>/enrollments', methods=['GET'])
 @instructor_required
 def get_course_enrollments(course_id):
@@ -484,7 +487,7 @@ def get_course_enrollments(course_id):
         return jsonify({'error': str(e)}), 500
 
 
-
+ 
 # get modules 
 @course_bp.route('/<int:course_id>/modules', methods=['GET'])
 @instructor_required

@@ -7,6 +7,7 @@ from services.email_service import EmailService
 
 notification_bp = Blueprint('notifications', __name__)
 
+# get notifications 
 @notification_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_notifications():
@@ -43,7 +44,9 @@ def get_notifications():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
 
+# mark as read for specific  notifications
 @notification_bp.route('/<int:notification_id>/read', methods=['PUT'])
 @jwt_required()
 def mark_notification_read(notification_id):
@@ -68,6 +71,7 @@ def mark_notification_read(notification_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# mark all as read for notifications
 @notification_bp.route('/mark-all-read', methods=['PUT'])
 @jwt_required()
 def mark_all_notifications_read():
@@ -85,6 +89,7 @@ def mark_all_notifications_read():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# delete notification
 @notification_bp.route('/<int:notification_id>', methods=['DELETE'])
 @jwt_required()
 def delete_notification(notification_id):
@@ -105,7 +110,8 @@ def delete_notification(notification_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
+    
+# create / send notification
 @notification_bp.route('/send', methods=['POST'])
 @admin_required
 def send_notification():
@@ -167,6 +173,7 @@ def send_notification():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# send notifications for all users 
 @notification_bp.route('/broadcast', methods=['POST'])
 @admin_required
 def broadcast_notification():
@@ -231,6 +238,7 @@ def broadcast_notification():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# notifications unread count 
 @notification_bp.route('/unread-count', methods=['GET'])
 @jwt_required()
 def get_unread_count():
@@ -246,6 +254,7 @@ def get_unread_count():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# notification settings 
 @notification_bp.route('/settings', methods=['GET'])
 @jwt_required()
 def get_notification_settings():
@@ -270,6 +279,7 @@ def get_notification_settings():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# updating notification settings 
 @notification_bp.route('/settings', methods=['PUT'])
 @jwt_required()
 def update_notification_settings():

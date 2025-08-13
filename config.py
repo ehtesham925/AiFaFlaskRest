@@ -14,7 +14,9 @@ class Config:
         "pool_recycle": 300,
         "pool_pre_ping": True,
     }
-    
+    GOOGLE_CLIENT_ID=os.environ.get("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET=os.environ.get("GOOGLE_CLIENT_SECRET")
+    GOOGLE_REDIRECT_URI=os.environ.get("GOOGLE_REDIRECT_URI")
     # JWT configuration
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-string')
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)

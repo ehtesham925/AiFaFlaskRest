@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, create_access_token, create_refresh_token, get_jwt_identity, get_jwt
+from flask_jwt_extended import jwt_required, create_access_token, create_refresh_token, get_jwt_identity, get_jwt,set_access_cookies,set_refresh_cookies
 from werkzeug.security import check_password_hash
 from app import db
 from models import User, UserRole, TokenBlacklist
@@ -7,6 +7,8 @@ from utils.validators import validate_email, validate_password
 import re
 import os 
 from werkzeug.utils import secure_filename
+import requests 
+from config import Config
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -75,13 +77,16 @@ def register():
         # Create tokens
         access_token = create_access_token(identity=user.id)
         refresh_token = create_refresh_token(identity=user.id)
-        
-        return jsonify({
-            'message': 'User registered successfully',
+        response = {
+         'message': 'User registered successfully',
             'user': user.to_dict(),
             'access_token': access_token,
-            'refresh_token': refresh_token
-        }), 201
+            'refresh_token': refresh_token   
+        }
+        set_access_cookies(response, access_token)
+        set_refresh_cookies(response, refresh_token)
+
+        return response, 201 
         
     except Exception as e:
         db.session.rollback()
@@ -202,3 +207,69 @@ def get_current_user():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+
+
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+
+
+
+
+# Step 2: Function to verify Google ID token
+def verify_google_token(token):
+    """
+    Verifies the ID token received from frontend using Google's endpoint.
+    Returns user info (email, name, etc) if valid, else None.
+    """
+    try:
+        response = requests.get(f'https://oauth2.googleapis.com/tokeninfo?id_token={token}')
+        if response.status_code != 200:
+            return None
+        user_info = response.json()
+
+        # Confirm token is issued for your app
+        if user_info['aud'] != Config.GOOGLE_CLIENT_ID:
+            return None
+
+        return user_info
+    except Exception as e:
+        print(f"Token verification error: {e}")
+        return None
+
+
+
+# Step 3: Route to handle Google login
+@auth_bp.route('/api/auth/google', methods=['POST'])
+def google_login():
+    """
+    This route receives the Google ID token from frontend,
+    verifies it, then issues a custom JWT for use with protected routes.
+    """
+    data = request.get_json()
+    google_token = data.get("token")
+
+
+
+    if not google_token:
+        return jsonify({"error": "Token is missing"}), 400
+
+    # Verify token with Google
+    user_info = verify_google_token(google_token)
+    if not user_info:
+        return jsonify({"error": "Invalid token"}), 401
+
+    # You can also store user in DB here (optional)
+    # Example: create_user_if_not_exists(user_info["email"])
+    
+    # Step 4: Issue your own JWT
+    access_token = create_access_token(identity={
+        "email": user_info["email"],
+        "name": user_info.get("name"),
+        "picture": user_info.get("picture")
+    })
+
+    return jsonify(access_token=access_token), 200
+
+

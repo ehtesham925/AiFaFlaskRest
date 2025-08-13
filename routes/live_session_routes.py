@@ -3,11 +3,12 @@ from flask_jwt_extended import jwt_required
 from app import db
 from models import LiveSession, Course, User, Enrollment, UserRole
 from auth import get_current_user, instructor_required
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,timezone
 from services.email_service import EmailService
 
 live_session_bp = Blueprint('live_sessions', __name__)
 
+# get live sessions 
 @live_session_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_live_sessions():
@@ -64,6 +65,7 @@ def get_live_sessions():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# create live sessions 
 @live_session_bp.route('/', methods=['POST'])
 @instructor_required
 def create_live_session():
@@ -97,7 +99,7 @@ def create_live_session():
             return jsonify({'error': 'Invalid scheduled_at format. Use ISO format.'}), 400
         
         # Validate scheduled time is in the future
-        if scheduled_at <= datetime.utcnow():
+        if scheduled_at <= datetime.now(timezone.utc):
             return jsonify({'error': 'Scheduled time must be in the future'}), 400
         
         # Create live session
@@ -140,6 +142,7 @@ def create_live_session():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# get perticular session 
 @live_session_bp.route('/<int:session_id>', methods=['GET'])
 @jwt_required()
 def get_live_session(session_id):
@@ -179,6 +182,7 @@ def get_live_session(session_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# update perticular session 
 @live_session_bp.route('/<int:session_id>', methods=['PUT'])
 @instructor_required
 def update_live_session(session_id):
@@ -235,7 +239,8 @@ def update_live_session(session_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
+    
+# delete session
 @live_session_bp.route('/<int:session_id>', methods=['DELETE'])
 @instructor_required
 def delete_live_session(session_id):
