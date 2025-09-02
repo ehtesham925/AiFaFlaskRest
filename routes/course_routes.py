@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
-from models import Course, CourseModule, Lesson, User, Enrollment, UserRole, CourseStatus
+from models import Course, CourseModule, Lesson, User, Enrollment, UserRole, CourseStatus,MasterCategory,SubCategory
 from auth import get_current_user, instructor_required
 from utils.validators import validate_course_data
 from werkzeug.utils import secure_filename
@@ -117,71 +117,75 @@ def get_course(course_id):
         return jsonify({'error': str(e)}), 500
 
 # creating courses 
-@course_bp.route('create-courses/', methods=['POST'])
+@course_bp.route('/create-courses', methods=['POST'])
 # @instructor_required
 def create_course():
-    try:
-        user = get_current_user()
-        data = request.form  # ✅ Get non-file fields from form data
-        file = request.files.get('thumbnail')  # ✅ Get uploaded file
+    print("Create Course Route hit---")
+    
+    print("FORM DATA:", request.form)
+    print("FILES:", request.files)
 
-        # Optional: validate required fields
-        required_fields = ['title', 'price']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'error': f'{field} is required'}), 400
+    user = get_current_user()
+    data = request.form  # ✅ Get non-file fields from form data
+    file = request.files.get('thumbnail')  # ✅ Get uploaded file
 
-        # Handle thumbnail upload if provided
-        thumbnail_path = None
-        global UPLOAD_FOLDER
-        if file and allowed_file(file.filename):  # Make sure `allowed_file` checks file extension
-            filename = secure_filename(file.filename)
-            unique_filename = f"{uuid.uuid4().hex}_{filename}"
-            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-            filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
-            file.save(filepath)
-            thumbnail_path = filepath
+    # Optional: validate required fields
+    required_fields = ['title', 'price']
+    for field in required_fields:
+        if not data.get(field):
+            return jsonify({'error': f'{field} is required'}), 400
 
-        
-        # print(data.get('status'),CourseStatus(data['status']))
-       
-                # Handle role safely
-        if data.get('status'):
-            try:
-                status = CourseStatus(data['status'].lower())
-            except ValueError:
-                return jsonify({'error': f"Invalid role: {data['role']}"}), 400
-        else:
-            status = CourseStatus.DRAFT
+    # Handle thumbnail upload if provided
+    thumbnail_path = None
+    global UPLOAD_FOLDER
+    if file and allowed_file(file.filename):  # Make sure `allowed_file` checks file extension
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4().hex}_{filename}"
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
+        file.save(filepath)
+        thumbnail_path = filepath
 
-        # Create course
-        course = Course(
-            title=data.get('title'),
-            description=data.get('description'),
-            short_description=data.get('short_description'),
-            instructor_id=user.id,
-            price=float(data.get('price')),
-            currency=data.get('currency', 'USD'),
-            duration_hours=data.get('duration_hours'),
-            difficulty_level=data.get('difficulty_level'),
-            thumbnail=thumbnail_path,
-            max_students=int(data.get('max_students', 0)) if data.get('max_students') else None,
-            prerequisites=data.get('prerequisites'),
-            status=status,
-            learning_outcomes=data.get('learning_outcomes'),
-        )
+    
+    # print(data.get('status'),CourseStatus(data['status']))
+    
+            # Handle role safely
+    if data.get('status'):
+        try:
+            status = CourseStatus(data['status'].lower())
+        except ValueError:
+            return jsonify({'error': f"Invalid role: {data['role']}"}), 400
+    else:
+        status = CourseStatus.DRAFT
 
-        db.session.add(course)
-        db.session.commit()
+    # Create course
+    course = Course(
+        title=data.get('title'),
+        description=data.get('description'),
+        short_description=data.get('short_description'),
+        instructor_id=user.id,
+        price=float(data.get('price')),
+        currency=data.get('currency', 'USD'),
+        duration_hours=data.get('duration_hours'),
+        difficulty_level=data.get('difficulty_level'),
+        thumbnail=thumbnail_path,
+        max_students=int(data.get('max_students', 0)) if data.get('max_students') else None,
+        prerequisites=data.get('prerequisites'),
+        status=status,
+        learning_outcomes=data.get('learning_outcomes'),
+    )
 
-        return jsonify({
-            'message': 'Course created successfully',
-            'course': course.to_dict(include_modules=True)
-        }), 201
+    db.session.add(course)
+    db.session.commit()
 
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    return jsonify({
+        'message': 'Course created successfully',
+        'course': course.to_dict(include_modules=True)
+    }), 201
+
+    # except Exception as e:
+    #     db.session.rollback()
+    #     return jsonify({'error': str(e)}), 500
 
 # edit specific course 
 @course_bp.route('/<int:course_id>', methods=['PUT'])
@@ -667,6 +671,271 @@ def delete_lesson(course_id, module_id, lesson_id):
         db.session.commit()
 
         return jsonify({'message': 'Lesson deleted successfully'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+# ------------------------------
+# Existing flat list endpoint
+# ------------------------------
+@course_bp.route('get-courses-master/', methods=['POST'])
+def get_courses_master():
+    try:
+        data = request.get_json()
+        types = ["published", "draft", "archived"]
+        status = data.get('status', '').lower()
+
+        query = Course.query
+
+        if status:
+            if status in types:
+                query = query.filter_by(status=CourseStatus(status))
+            elif status != 'all':
+                return {"error": f"Invalid status: {status}"}
+
+        # Filters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        difficulty = request.args.get('difficulty')
+        instructor_id = request.args.get('instructor_id', type=int)
+        search = request.args.get('search')
+
+        if difficulty:
+            query = query.filter_by(difficulty_level=difficulty)
+
+        if instructor_id:
+            query = query.filter_by(instructor_id=instructor_id)
+
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                db.or_(
+                    Course.title.ilike(search_term),
+                    Course.description.ilike(search_term),
+                    Course.short_description.ilike(search_term)
+                )
+            )
+
+        # Pagination
+        courses = query.order_by(Course.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+
+        return jsonify({
+            'courses': [course.to_dict() for course in courses.items],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': courses.total,
+                'pages': courses.pages,
+                'has_next': courses.has_next,
+                'has_prev': courses.has_prev
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ------------------------------
+# New hierarchical endpoint
+# ------------------------------
+
+
+# get full category → subcategory → courses hierarchy
+@course_bp.route('get-master-categories/', methods=['GET'])
+def get_master_categories():
+    try:
+        categories = MasterCategory.query.all()
+        return jsonify({
+            "categories": [cat.to_dict() for cat in categories]
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+# Create MasterCategory with SubCategories
+@course_bp.route("/mastercategories", methods=["POST"])
+def create_master_category():
+    try:
+        data = request.get_json()
+
+        # Create MasterCategory
+        master = MasterCategory(name=data["name"])
+        db.session.add(master)
+        db.session.flush()  # to get master.id before commit
+
+        # Create SubCategories if provided
+        if "subcategories" in data:
+            for sub in data["subcategories"]:
+                new_sub = SubCategory(
+                    name=sub["name"],
+                    master_category_id=master.id
+                )
+                db.session.add(new_sub)
+
+        db.session.commit()
+
+        return jsonify({"message": "MasterCategory created successfully", "category": master.to_dict()}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+    
+
+
+# Create SubCategory with Courses
+@course_bp.route("/subcategories", methods=["POST"])
+def create_subcategory_with_courses():
+    try:
+        data = request.get_json()
+
+        # Validate MasterCategory exists
+        master = MasterCategory.query.get(data["master_category_id"])
+        if not master:
+            return jsonify({"error": "MasterCategory not found"}), 404
+
+        # Create SubCategory
+        subcategory = SubCategory(
+            name=data["name"],
+            master_category_id=master.id
+        )
+        db.session.add(subcategory)
+        db.session.flush()  # get subcategory.id before commit
+
+        # Add Courses if provided
+        if "courses" in data:
+            for c in data["courses"]:
+                new_course = Course(
+                    title=c["title"],
+                    description=c.get("description", ""),
+                    subcategory_id=subcategory.id
+                )
+                db.session.add(new_course)
+
+        db.session.commit()
+
+        return jsonify({
+            "message": "SubCategory with courses created successfully",
+            "subcategory": subcategory.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+    
+
+
+
+#  Create a Course under a SubCategory
+@course_bp.route("/subcategory/courses", methods=["POST"])
+def create_course_subcategory():
+    try:
+        data = request.get_json()
+
+        # Validate SubCategory
+        subcategory = SubCategory.query.get(data["subcategory_id"])
+        if not subcategory:
+            return jsonify({"error": "SubCategory not found"}), 404
+
+        # Create Course
+        course = Course(
+            title=data["title"],
+            description=data.get("description", ""),
+            subcategory_id=subcategory.id
+        )
+        db.session.add(course)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Course created successfully",
+            "course": {
+                "id": course.id,
+                "title": course.title,
+                "description": course.description,
+                "subcategory_id": course.subcategory_id
+            }
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+
+
+
+@course_bp.route('/create-courses-new', methods=['POST'])
+# @instructor_required
+def create_course_new():
+    try:
+        print("FORM DATA:", request.form)
+        print("FILES:", request.files)
+
+        user = get_current_user()
+
+        # Detect request type: JSON or form-data
+        if request.is_json:
+            data = request.get_json()
+            file = None
+        else:
+            data = request.form.to_dict()  # convert MultiDict → dict
+            file = request.files.get('thumbnail')
+
+        # Validate required fields
+        required_fields = ['title', 'price']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'{field} is required'}), 400
+
+        # Handle thumbnail (URL or file)
+        thumbnail_path = None
+        global UPLOAD_FOLDER
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            unique_filename = f"{uuid.uuid4().hex}_{filename}"
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+            filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
+            file.save(filepath)
+            thumbnail_path = filepath
+        elif data.get("thumbnail"):  
+            # If JSON contains a URL string
+            thumbnail_path = data.get("thumbnail")
+
+        # Handle course status safely
+        if data.get('status'):
+            try:
+                status = CourseStatus(data['status'].lower())
+            except ValueError:
+                return jsonify({'error': f"Invalid status: {data['status']}"}), 400
+        else:
+            status = CourseStatus.DRAFT
+
+        # Create course
+        course = Course(
+            title=data.get('title'),
+            description=data.get('description'),
+            short_description=data.get('short_description'),
+            instructor_id=user.id,
+            price=float(data.get('price')),
+            currency=data.get('currency', 'USD'),
+            duration_hours=float(data.get('duration_hours', 0)) if data.get('duration_hours') else None,
+            difficulty_level=data.get('difficulty_level'),
+            thumbnail=thumbnail_path,
+            max_students=int(data.get('max_students', 0)) if data.get('max_students') else None,
+            prerequisites=data.get('prerequisites'),
+            status=status,
+            learning_outcomes=data.get('learning_outcomes'),
+        )
+
+        db.session.add(course)
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Course created successfully',
+            'course': course.to_dict(include_modules=True)
+        }), 201
 
     except Exception as e:
         db.session.rollback()

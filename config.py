@@ -7,7 +7,8 @@ load_dotenv()
 
 class Config:
     # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'postgresql://localhost/Aifa') 
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db' 
+    # SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'postgresql://localhost/Aifa') 
     # SQLALCHEMY_DATABASE_URI = 'sqlite:///aifa_academy.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {

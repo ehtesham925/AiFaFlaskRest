@@ -65,6 +65,57 @@ class User(db.Model):
             'updated_at': self.updated_at.isoformat()
         }
 
+class MasterCategory(db.Model):
+    __tablename__ = 'master_categories'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+
+    # one-to-many relationship to subcategories
+    subcategories = db.relationship("SubCategory", backref="master_category", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "subcategories": [sub.to_dict() for sub in self.subcategories]
+        }
+
+class SubCategory(db.Model):
+    __tablename__ = 'sub_categories'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+
+    master_category_id = db.Column(db.Integer, db.ForeignKey('master_categories.id'), nullable=False)
+    
+    # one-to-many relationship to courses
+    courses = db.relationship("Course", backref="subcategory", cascade="all, delete-orphan")
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "courses": [c.to_dict() for c in self.courses]
+        }
+
+
+
+class CoursePrerequisitesCourses(db.Model):
+    __tablename__ = "course_prerequisite_courses"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)  # main course
+    prerequisite_course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)  # prerequisite course
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+     # relationship back to the prerequisite course itself
+    prerequisite_course = db.relationship(
+        "Course",
+        foreign_keys=[prerequisite_course_id],
+        backref="prerequisite_for"
+    )
+
+
 class Course(db.Model):
     __tablename__ = 'courses'
     
@@ -72,6 +123,7 @@ class Course(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     short_description = db.Column(db.String(500))
+    subcategory_id = db.Column(db.Integer, db.ForeignKey('sub_categories.id'), nullable=True)# change nullable to False in production or while changing the database 
     instructor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     price = db.Column(Numeric(10, 2), nullable=False)
     currency = db.Column(db.String(3), default='USD')
@@ -85,7 +137,7 @@ class Course(db.Model):
     # banner_picture = db.Column(db.String(255),nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+    prerequisites_course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
     # Relationships
     instructor = db.relationship('User', backref='courses_taught')
     modules = db.relationship('CourseModule', backref='course', lazy='dynamic', cascade='all, delete-orphan')
@@ -93,7 +145,15 @@ class Course(db.Model):
     payments = db.relationship('Payment', backref='course', lazy='dynamic')
     certificates = db.relationship('Certificate', backref='course', lazy='dynamic')
     live_sessions = db.relationship('LiveSession', backref='course', lazy='dynamic')
-    
+   
+    prerequisites_courses = db.relationship(
+        "CoursePrerequisitesCourses",
+        foreign_keys=[CoursePrerequisitesCourses.course_id],
+        backref="course",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
     def to_dict(self, include_modules=False):
         data = {
             'id': self.id,
@@ -113,13 +173,30 @@ class Course(db.Model):
             'learning_outcomes': self.learning_outcomes,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
-            'enrollment_count': self.enrollments.count()
-        }
+            'enrollment_count': self.enrollments.count(),
+
+            
+        # full prerequisites
+        'prerequisites_courses': [
+            {
+                'id': prereq.prerequisite_course.id,
+                'title': prereq.prerequisite_course.title,
+                'difficulty_level': prereq.prerequisite_course.difficulty_level,
+                'status': prereq.prerequisite_course.status.value if prereq.prerequisite_course.status else None
+            }
+            for prereq in self.prerequisites_courses.all()
+        ]
+    }
+
+            
+  
         
         if include_modules:
             data['modules'] = [module.to_dict(include_lessons=True) for module in self.modules.order_by(CourseModule.order)]
         
         return data
+
+
 
 class CourseModule(db.Model):
     __tablename__ = 'course_modules'
