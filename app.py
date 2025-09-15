@@ -51,6 +51,7 @@ def create_app(config_class=Config):
                 "http://localhost:5173",  # Default React dev server
                 "http://localhost:5174",  # Default React dev server
                 "http://127.0.0.1:3000",  # Alternative local address
+                  # Alternative local address
                  FRONTEND_URL_STUDENTS ,                      # Your future production frontend
                  FRONTEND_URL_ADMIN
             ],
@@ -72,7 +73,8 @@ def create_app(config_class=Config):
     from routes.certificate_routes import certificate_bp
     from routes.live_session_routes import live_session_bp
     from routes.helper_routes import helper_bp
-    
+    from routes.prerequisites import prereq_bp
+
     app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')
     app.register_blueprint(user_bp, url_prefix='/api/v1/users')
     app.register_blueprint(course_bp, url_prefix='/api/v1/courses')
@@ -83,6 +85,7 @@ def create_app(config_class=Config):
     app.register_blueprint(certificate_bp, url_prefix='/api/v1/certificates')
     app.register_blueprint(live_session_bp, url_prefix='/api/v1/live-sessions')
     app.register_blueprint(helper_bp,url_prefix='/api/v1/helper/')
+    app.register_blueprint(prereq_bp,url_prefix='/api/v1')
     # Create tables
     with app.app_context():
         import models  # noqa: F401

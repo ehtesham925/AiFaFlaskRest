@@ -140,7 +140,7 @@ class Course(db.Model):
     prerequisites_course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
     # Relationships
     instructor = db.relationship('User', backref='courses_taught')
-    modules = db.relationship('CourseModule', backref='course', lazy='dynamic', cascade='all, delete-orphan')
+    modules = db.relationship('CourseModule', backref='course', cascade='all, delete-orphan',order_by="CourseModule.order")
     enrollments = db.relationship('Enrollment', backref='course', lazy='dynamic')
     payments = db.relationship('Payment', backref='course', lazy='dynamic')
     certificates = db.relationship('Certificate', backref='course', lazy='dynamic')
@@ -192,10 +192,9 @@ class Course(db.Model):
   
         
         if include_modules:
-            data['modules'] = [module.to_dict(include_lessons=True) for module in self.modules.order_by(CourseModule.order)]
+            data['modules'] = [module.to_dict(include_lessons=True) for module in self.modules]
         
         return data
-
 
 
 class CourseModule(db.Model):
@@ -246,8 +245,8 @@ class Lesson(db.Model):
     resources = db.relationship('LessonResource', backref='lesson', lazy='dynamic', cascade='all, delete-orphan')
     progress = db.relationship('LessonProgress', backref='lesson', lazy='dynamic')
     
-    def to_dict(self):
-        return {
+    def to_dict(self,include_resources=False):
+        data =  {
             'id': self.id,
             'module_id': self.module_id,
             'title': self.title,
@@ -259,6 +258,7 @@ class Lesson(db.Model):
             'created_at': self.created_at.isoformat(),
             'resources': [resource.to_dict() for resource in self.resources]
         }
+        return data 
 
 class LessonResource(db.Model):
     __tablename__ = 'lesson_resources'
@@ -431,3 +431,7 @@ class TokenBlacklist(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     jti = db.Column(db.String(120), nullable=False, unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+
+

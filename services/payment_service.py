@@ -222,3 +222,8 @@ class PaymentService:
             return charges
         except stripe.error.StripeError as e:
             raise Exception(f"Stripe error: {str(e)}")
+
+
+
+
+        

@@ -9,6 +9,9 @@ import os
 from werkzeug.utils import secure_filename
 import requests 
 from config import Config
+from services.email_service import EmailService
+
+email_service = EmailService()
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -17,7 +20,12 @@ ALLOWED_EXTENSIONS_PROFILES = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS_PROFILES
+from flask import jsonify, request
+from flask_jwt_extended import create_access_token, create_refresh_token, set_access_cookies, set_refresh_cookies
+from werkzeug.utils import secure_filename
+import os
 
+""" Register """
 @auth_bp.route('/register', methods=['POST'])
 def register():
     try:
@@ -34,13 +42,15 @@ def register():
         
         # Validate password strength
         if not validate_password(data['password']):
-            return jsonify({'error': 'Password must be at least 8 characters long and contain uppercase, lowercase, digit and special character'}), 400
+            return jsonify({
+                'error': 'Password must be at least 8 characters long and contain uppercase, lowercase, digit and special character'
+            }), 400
         
         # Check if user already exists
         if User.query.filter_by(email=data['email'].lower()).first():
             return jsonify({'error': 'Email already registered'}), 409
              
-                # Handle role safely
+        # Handle role safely
         if data.get('role'):
             try:
                 role = UserRole(data['role'].lower())
@@ -48,10 +58,8 @@ def register():
                 return jsonify({'error': f"Invalid role: {data['role']}"}), 400
         else:
             role = UserRole.STUDENT
-
         
-        
-        #     # Handle file upload
+        # (Optional) File upload handling — commented
         # file = request.files.get('profile_pic')
         # profile_path = None
         # if file and allowed_file(file.filename):
@@ -75,14 +83,20 @@ def register():
         db.session.commit()
         
         # Create tokens
-        access_token = create_access_token(identity=user.id)
-        refresh_token = create_refresh_token(identity=user.id)
-        response = {
-         'message': 'User registered successfully',
+        access_token = create_access_token(identity=str(user.id))
+        refresh_token = create_refresh_token(identity=str(user.id))
+
+        response_data = {
+            'message': 'User registered successfully',
             'user': user.to_dict(),
             'access_token': access_token,
-            'refresh_token': refresh_token   
+            'refresh_token': refresh_token
         }
+        email_service.send_welcome_email(user)
+        # ✅ jsonify makes it a Response object
+        response = jsonify(response_data)
+
+        # ✅ Attach cookies properly
         set_access_cookies(response, access_token)
         set_refresh_cookies(response, refresh_token)
 
@@ -90,8 +104,10 @@ def register():
         
     except Exception as e:
         db.session.rollback()
+        # Always return JSON response on error
         return jsonify({'error': str(e)}), 500
 
+"""  Login  """
 @auth_bp.route('/login', methods=['POST'])
 def login():
     try:
@@ -124,6 +140,7 @@ def login():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+"""  Refresh Token  """
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():
@@ -143,6 +160,7 @@ def refresh():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+""" Logout  """
 @auth_bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
@@ -160,6 +178,7 @@ def logout():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+""" Change Password  """
 @auth_bp.route('/change-password', methods=['POST'])
 @jwt_required()
 def change_password():
@@ -193,6 +212,7 @@ def change_password():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+""" Get Current Details   """
 @auth_bp.route('/me', methods=['GET'])
 @jwt_required()
 def get_current_user():
@@ -213,10 +233,6 @@ def get_current_user():
 
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-
-
-
-
 # Step 2: Function to verify Google ID token
 def verify_google_token(token):
     """

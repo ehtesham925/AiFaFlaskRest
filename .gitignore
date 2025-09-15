@@ -50,7 +50,8 @@ migrations/
 
 
 attached_assets/
-instance/
+
+/static
 
 .replit
 

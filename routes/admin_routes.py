@@ -5,9 +5,9 @@ from models import User, Course, Enrollment, Payment, UserRole, CourseStatus, Pa
 from auth import admin_required, get_current_user
 from datetime import datetime, timedelta
 from sqlalchemy import func
-
 admin_bp = Blueprint('admin', __name__)
 
+""" Dashboard  """
 @admin_bp.route('/dashboard', methods=['GET'])
 @admin_required
 def get_admin_dashboard():
@@ -60,6 +60,7 @@ def get_admin_dashboard():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+""" Get users   """
 @admin_bp.route('/users', methods=['GET'])
 @admin_required
 def get_all_users():
@@ -102,7 +103,8 @@ def get_all_users():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
+    
+""" Get a Specific User  """
 @admin_bp.route('/users/<int:user_id>', methods=['GET'])
 @admin_required
 def get_user_details(user_id):
@@ -131,6 +133,7 @@ def get_user_details(user_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+""" Edit a Specific User  """
 @admin_bp.route('/users/<int:user_id>', methods=['PUT'])
 @admin_required
 def update_user(user_id):
@@ -172,6 +175,7 @@ def update_user(user_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+""" Delete a Specific User  """
 @admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
 @admin_required
 def delete_user(user_id):
@@ -195,6 +199,7 @@ def delete_user(user_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+""" Get Courses  """
 @admin_bp.route('/courses', methods=['GET'])
 @admin_required
 def get_all_courses():
@@ -231,6 +236,7 @@ def get_all_courses():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+"""Edit a Course"""
 @admin_bp.route('/courses/<int:course_id>/status', methods=['PUT'])
 @admin_required
 def update_course_status(course_id):
@@ -255,6 +261,7 @@ def update_course_status(course_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+""" Get Payments  """
 @admin_bp.route('/payments', methods=['GET'])
 @admin_required
 def get_all_payments():
@@ -303,6 +310,7 @@ def get_all_payments():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+""" Get Enrollments """
 @admin_bp.route('/enrollments', methods=['GET'])
 @admin_required
 def get_all_enrollments():
@@ -347,6 +355,7 @@ def get_all_enrollments():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+"""  Get Analytics   """
 @admin_bp.route('/analytics', methods=['GET'])
 @admin_required
 def get_analytics():
@@ -398,7 +407,8 @@ def get_analytics():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
+    
+""" Promote to Instructor """
 @admin_bp.route('/users/<int:user_id>/promote-instructor', methods=['POST'])
 @admin_required
 def promote_to_instructor(user_id):
