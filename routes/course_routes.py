@@ -901,25 +901,29 @@ def create_only_master_category():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
-    
+
 """Get master Categories only"""
 @course_bp.route('/only-mastercategories', methods=['GET'])
 def get_master_categories_only():
     try:
         categories = MasterCategory.query.all()
         count = len(categories)
-        names = [cat.name for cat in categories]  # extract only names
-        
+
+        # Convert SQLAlchemy objects into dictionaries
+        categories_data = [
+            {"id": cat.id, "name": cat.name}
+            for cat in categories
+        ]
 
         return jsonify({
             "message": "Master categories fetched successfully",
-            "count":count,
-            "categories": categories
+            "count": count,
+            "categories": categories_data
         }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
 
 """Update MasterCategory"""
 @course_bp.route('/only-mastercategories/<int:id>', methods=['PUT'])
