@@ -909,11 +909,12 @@ def get_master_categories_only():
         categories = MasterCategory.query.all()
         count = len(categories)
         names = [cat.name for cat in categories]  # extract only names
+        
 
         return jsonify({
             "message": "Master categories fetched successfully",
             "count":count,
-            "categories": names
+            "categories": categories
         }), 200
 
     except Exception as e:
