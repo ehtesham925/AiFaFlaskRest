@@ -8,6 +8,7 @@ from utils.validators import validate_email
 user_bp = Blueprint('users', __name__)
 
 # get profile details 
+"""GET profile Details """
 @user_bp.route('/profile', methods=['GET'])
 @jwt_required()
 def get_profile():
@@ -22,6 +23,7 @@ def get_profile():
         return jsonify({'error': str(e)}), 500
 
 # update user details 
+"""Edit Profile Details"""
 @user_bp.route('/profile', methods=['PUT'])
 @jwt_required()
 def update_profile():
@@ -68,7 +70,8 @@ def update_profile():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-#ger enrollments 
+#get enrollments 
+""" Get Enrollments  """
 @user_bp.route('/enrollments', methods=['GET'])
 @jwt_required()
 def get_enrollments():
@@ -91,6 +94,7 @@ def get_enrollments():
         return jsonify({'error': str(e)}), 500
     
 # create enrollments 
+"""  Create Enrollments """
 @user_bp.route('/enrollments/<int:course_id>', methods=['POST'])
 @jwt_required()
 def enroll_course(course_id):
@@ -137,6 +141,7 @@ def enroll_course(course_id):
 
 
 # get enrollment details 
+""" Get Enrollment Details """
 @user_bp.route('/enrollments/<int:course_id>/progress', methods=['GET'])
 @jwt_required()
 def get_course_progress(course_id):
@@ -172,6 +177,7 @@ def get_course_progress(course_id):
         return jsonify({'error': str(e)}), 500
 
 # Create enrollment progress 
+""" Create Enrollment Progress  """
 @user_bp.route('/enrollments/<int:course_id>/lessons/<int:lesson_id>/progress', methods=['POST'])
 @jwt_required()
 def update_lesson_progress(course_id, lesson_id):
@@ -243,6 +249,7 @@ def update_lesson_progress(course_id, lesson_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+""" Get Student Certificates  """
 @user_bp.route('/certificates', methods=['GET'])
 @jwt_required()
 def get_certificates():
@@ -260,6 +267,7 @@ def get_certificates():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+"""Get Student Dashboard"""
 @user_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
 def get_dashboard():

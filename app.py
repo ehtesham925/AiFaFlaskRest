@@ -85,7 +85,7 @@ def create_app(config_class=Config):
     app.register_blueprint(certificate_bp, url_prefix='/api/v1/certificates')
     app.register_blueprint(live_session_bp, url_prefix='/api/v1/live-sessions')
     app.register_blueprint(helper_bp,url_prefix='/api/v1/helper/')
-    app.register_blueprint(prereq_bp,url_prefix='/api/v1')
+    app.register_blueprint(prereq_bp,url_prefix='/api/v1/')
     # Create tables
     with app.app_context():
         import models  # noqa: F401

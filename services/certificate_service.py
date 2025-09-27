@@ -23,7 +23,7 @@ class CertificateService:
         try:
             # Generate unique filename
             filename = f"certificate_{certificate.id}_{uuid.uuid4().hex[:8]}.pdf"
-            file_path = os.path.join(self.certificates_folder, filename)
+            file_path = os.path.join(self.certificates_folder, filename).replace("\\", "/")
             
             # Create the PDF document
             doc = SimpleDocTemplate(file_path, pagesize=A4)

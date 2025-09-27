@@ -8,6 +8,7 @@ import uuid
 
 certificate_bp = Blueprint('certificates', __name__)
 
+""" Get all certifications  """
 @certificate_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_user_certificates():
@@ -29,6 +30,7 @@ def get_user_certificates():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+""" Generate Certificate  """
 @certificate_bp.route('/generate/<int:course_id>', methods=['POST'])
 @jwt_required()
 def generate_certificate(course_id):
@@ -101,6 +103,7 @@ def generate_certificate(course_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+"""Download Certificate"""
 @certificate_bp.route('/download/<int:certificate_id>', methods=['GET'])
 @jwt_required()
 def download_certificate(certificate_id):
@@ -124,14 +127,21 @@ def download_certificate(certificate_id):
         
         from services.file_service import FileService
         file_service = FileService()
+
+        response_file = file_service.send_file(certificate.file_path, 
+            f"Certificate_{certificate.certificate_number}.pdf")
+        
         return file_service.send_file(
             certificate.file_path, 
             f"Certificate_{certificate.certificate_number}.pdf"
         )
+        # print(response_file)
+
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+"""Verify Certificate"""
 @certificate_bp.route('/verify/<certificate_number>', methods=['GET'])
 def verify_certificate(certificate_number):
     try:
@@ -158,6 +168,7 @@ def verify_certificate(certificate_number):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+""" Regenerate Certificate """
 @certificate_bp.route('/regenerate/<int:certificate_id>', methods=['POST'])
 @jwt_required()
 def regenerate_certificate(certificate_id):
@@ -202,6 +213,7 @@ def regenerate_certificate(certificate_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+"""Get All Certificates """
 @certificate_bp.route('/admin/all', methods=['GET'])
 @admin_required
 def get_all_certificates():
@@ -244,7 +256,8 @@ def get_all_certificates():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
+    
+""" Generate bulk Certificates """
 @certificate_bp.route('/admin/bulk-generate', methods=['POST'])
 @admin_required
 def bulk_generate_certificates():
@@ -320,7 +333,8 @@ def bulk_generate_certificates():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
+    
+""" Get certifications for the specific courses  """
 @certificate_bp.route('/course/<int:course_id>', methods=['GET'])
 @jwt_required()
 def get_course_certificates(course_id):

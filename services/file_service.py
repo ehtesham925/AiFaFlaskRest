@@ -78,15 +78,18 @@ class FileService:
     def send_file(self, file_path, download_name=None):
         """Send file for download"""
         try:
+            print("file path recieved to file service",file_path)
+
             if not file_path:
                 abort(404, "File not found")
             
-            # Construct full path
-            if not os.path.isabs(file_path):
-                full_path = os.path.join(self.upload_folder, file_path)
-            else:
-                full_path = file_path
-            
+            # # Construct full path
+            # if not os.path.isabs(file_path):
+            #     full_path = os.path.join(self.upload_folder, file_path)
+            # else:
+            #     full_path = file_path
+            #     full_path = file_path.replace("\\", "/")
+            full_path = file_path
             if not os.path.exists(full_path):
                 abort(404, "File not found")
             

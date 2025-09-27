@@ -118,7 +118,7 @@ def update_prerequisites(course_id):
         return jsonify({'error': 'Unauthorized'}), 403
 
     data = request.get_json()
-    new_prereq_ids = set(data.get("prerequisite_course_ids", []))
+    new_prereq_ids = set(data.get("prerequisite_course_ids", []))      
 
     # Validate
     valid_courses = Course.query.filter(Course.id.in_(new_prereq_ids)).all()

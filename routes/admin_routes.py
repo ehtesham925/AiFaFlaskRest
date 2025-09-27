@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from app import db
-from models import User, Course, Enrollment, Payment, UserRole, CourseStatus, PaymentStatus
+from models import User, Course, Enrollment, Payment, UserRole, CourseStatus, PaymentStatus, MasterCategory,SubCategory
 from auth import admin_required, get_current_user
 from datetime import datetime, timedelta
 from sqlalchemy import func
@@ -16,6 +16,8 @@ def get_admin_dashboard():
         total_users = User.query.count()
         total_students = User.query.filter_by(role=UserRole.STUDENT).count()
         total_instructors = User.query.filter_by(role=UserRole.INSTRUCTOR).count()
+        master_categories = MasterCategory.query.count()
+        subcategories = SubCategory.query.count()
         total_courses = Course.query.count()
         published_courses = Course.query.filter_by(status=CourseStatus.PUBLISHED).count()
         total_enrollments = Enrollment.query.filter_by(is_active=True).count()
@@ -37,6 +39,8 @@ def get_admin_dashboard():
                 'total_users': total_users,
                 'total_students': total_students,
                 'total_instructors': total_instructors,
+                'master_categories':master_categories,
+                'subcategories': subcategories,
                 'total_courses': total_courses,
                 'published_courses': published_courses,
                 'total_enrollments': total_enrollments,
@@ -123,7 +127,7 @@ def get_user_details(user_id):
         
         # Get user's payments
         payments = Payment.query.filter_by(user_id=user_id).all()
-        
+         
         return jsonify({
             'user': user.to_dict(),
             'enrollments': enrollment_data,
@@ -211,7 +215,7 @@ def get_all_courses():
         
         query = Course.query
         
-        if status:
+        if status:  
             query = query.filter_by(status=CourseStatus(status))
         
         if instructor_id:
@@ -236,7 +240,7 @@ def get_all_courses():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-"""Edit a Course"""
+"""Edit a Course Status """
 @admin_bp.route('/courses/<int:course_id>/status', methods=['PUT'])
 @admin_required
 def update_course_status(course_id):
@@ -431,7 +435,6 @@ def promote_to_instructor(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
 
 @admin_bp.route('/users/all', methods=['GET'])
 def get_all_userstest():

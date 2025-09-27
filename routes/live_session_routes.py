@@ -9,6 +9,7 @@ from services.email_service import EmailService
 live_session_bp = Blueprint('live_sessions', __name__)
 
 # get live sessions 
+""" Get Live Sessions    """
 @live_session_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_live_sessions():
@@ -65,7 +66,8 @@ def get_live_sessions():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# create live sessions 
+# create live sessions
+"""  Create live sessions and demo here       """ 
 @live_session_bp.route('/', methods=['POST'])
 @instructor_required
 def create_live_session():
@@ -138,11 +140,12 @@ def create_live_session():
             'live_session': live_session.to_dict()
         }), 201
         
-    except Exception as e:
+    except Exception as e:  
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# get perticular session 
+# get perticular session
+""" get perticular session  """ 
 @live_session_bp.route('/<int:session_id>', methods=['GET'])
 @jwt_required()
 def get_live_session(session_id):
@@ -182,7 +185,8 @@ def get_live_session(session_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# update perticular session 
+# update perticular session
+""" update perticular session """ 
 @live_session_bp.route('/<int:session_id>', methods=['PUT'])
 @instructor_required
 def update_live_session(session_id):
@@ -241,6 +245,7 @@ def update_live_session(session_id):
         return jsonify({'error': str(e)}), 500
     
 # delete session
+""" Delete perticular session """
 @live_session_bp.route('/<int:session_id>', methods=['DELETE'])
 @instructor_required
 def delete_live_session(session_id):
@@ -272,6 +277,7 @@ def delete_live_session(session_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+""" Get Upcomming Courses   """
 @live_session_bp.route('/upcoming', methods=['GET'])
 @jwt_required()
 def get_upcoming_sessions():
@@ -312,6 +318,7 @@ def get_upcoming_sessions():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+""" Get live sessions of perticular course   """
 @live_session_bp.route('/course/<int:course_id>', methods=['GET'])
 @jwt_required()
 def get_course_sessions(course_id):
@@ -348,7 +355,7 @@ def get_course_sessions(course_id):
             'course_title': course.title,
             'live_sessions': [session.to_dict() for session in sessions]
         }), 200
-        
+            
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
