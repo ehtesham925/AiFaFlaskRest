@@ -99,6 +99,28 @@ def get_courses_all():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@course_bp.route('/get-courses/<int:subcourse_id>', methods=['GET'])
+def get_courses_undersubcourse(subcourse_id):
+    try:
+        # Get the subcategory first
+        subcourse = SubCategory.query.get(subcourse_id)
+        if not subcourse:
+            return jsonify({"error": "Subcategory not found"}), 404
+
+        # Fetch courses that belong to this subcategory
+        courses = Course.query.filter_by(subcategory_id=subcourse_id) \
+                              .order_by(Course.created_at.desc()) \
+                              .all()
+
+        return jsonify({
+            "subcategory": subcourse.to_dict() if hasattr(subcourse, "to_dict") else {"id": subcourse.id, "name": subcourse.name},
+            "courses": [course.to_dict(include_modules=True) for course in courses]
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 
 
