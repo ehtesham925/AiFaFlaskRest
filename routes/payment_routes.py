@@ -46,7 +46,7 @@ def create_checkout_session():
         
         if existing_payment:
             return jsonify({'error': 'Payment already in progress'}), 409
-        
+            
         # Create payment record
         payment = Payment(
             user_id=user.id,

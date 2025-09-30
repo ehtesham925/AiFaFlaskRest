@@ -2,12 +2,13 @@ import stripe
 import os
 from flask import current_app
 
+
+
 class PaymentService:
     def __init__(self):
         stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
         self.webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
-        self.domain = self._get_domain()
-    
+        self.domain = self._get_domain()    
     def _get_domain(self):
         """Get the domain for redirect URLs"""
         # Check if running on Replit
