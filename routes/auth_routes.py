@@ -280,8 +280,8 @@ def google_login():
     # Example: create_user_if_not_exists(user_info["email"])
     
     # Step 4: Issue your own JWT
-    access_token = create_access_token(identity={
-        "email": user_info["email"],
+    access_token = create_access_token(identity= user_info["email"],
+        additional_claims={
         "name": user_info.get("name"),
         "picture": user_info.get("picture")
     })
