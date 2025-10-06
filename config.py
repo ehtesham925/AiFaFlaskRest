@@ -7,9 +7,9 @@ load_dotenv()
 
 class Config:
     # Database configuration
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db' 
-    # SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'postgresql://localhost/Aifa') 
-    # SQLALCHEMY_DATABASE_URI = 'sqlite:///aifa_academy.db'
+    # SQLALCHEMY_DATABASE_URI = 'postgresql://aifaflaskrestdb_user:lmjzIJs7IhVAjuZ1imzKokMYP9uDM9ja@dpg-d3hlt6r3fgac739thjbg-a.oregon-postgres.render.com/aifaflaskrestdb' 
+    # SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db' 
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///database.db') 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_recycle": 300,

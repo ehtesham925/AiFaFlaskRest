@@ -1367,7 +1367,7 @@ def get_categories_with_courses():
 
 import os
 from werkzeug.utils import secure_filename
-from models import db, LessonResource
+from models import db, LessonResource,CourseModule
 from datetime import datetime
 
 
@@ -1387,40 +1387,51 @@ def allowed_file(filename):
 @course_bp.route("/lesson-resources", methods=["POST"])
 def create_lesson_resource():
     try:
+        # 1️⃣ Extract fields
         lesson_id = request.form.get("lesson_id")
         title = request.form.get("title")
 
         if not lesson_id or not title:
             return jsonify({"error": "lesson_id and title are required"}), 400
 
-        # Handle file upload
+        # 2️⃣ Fetch lesson, module, and course
+        lesson = Lesson.query.get(lesson_id)
+        if not lesson:
+            return jsonify({"error": f"Lesson with id {lesson_id} not found"}), 404
+
+        module = CourseModule.query.get(lesson.module_id)
+        if not module:
+            return jsonify({"error": f"Module for lesson {lesson_id} not found"}), 404
+
+        course = Course.query.get(module.course_id)
+        if not course:
+            return jsonify({"error": f"Course for module {module.id} not found"}), 404
+
+        # 3️⃣ Handle file upload
         if "file" not in request.files:
             return jsonify({"error": "File is required"}), 400
 
         file = request.files["file"]
-
         if file.filename == "":
             return jsonify({"error": "No file selected"}), 400
 
         if not allowed_file(file.filename):
             return jsonify({"error": "File type not allowed"}), 400
 
-        # Example: courseid_moduleid_lessonid_lessonresourse.ext
-        course_id = request.form.get("course_id", "course")
-        module_id = request.form.get("module_id", "module")
-
+        # 4️⃣ Create safe unique filename
         filename = secure_filename(file.filename)
         extension = filename.rsplit(".", 1)[1].lower()
-        unique_filename = f"{course_id}_{module_id}_{lesson_id}_{title.replace(' ', '_')}.{extension}"
+        unique_filename = f"{course.id}_{module.id}_{lesson.id}_{title.replace(' ', '_')}.{extension}"
 
+        # 5️⃣ Save file
         file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
         file.save(file_path)
 
-        # Create DB entry
+        # 6️⃣ Create DB entry
         resource = LessonResource(
-            lesson_id=lesson_id,
+            lesson_id=lesson.id,
             title=title,
-            file_path=file_path.replace("\\", "/"),  # store forward slashes
+            file_path=file_path.replace("\\", "/"),
             file_type=extension,
             file_size=os.path.getsize(file_path),
             created_at=datetime.utcnow()
@@ -1429,11 +1440,20 @@ def create_lesson_resource():
         db.session.add(resource)
         db.session.commit()
 
-        return jsonify(resource.to_dict()), 201
+        # Optional: Include course/module details in response
+        response_data = resource.to_dict()
+        response_data.update({
+            "lesson_title": lesson.title,
+            "module_title": module.title,
+            "course_title": course.title
+        })
+
+        return jsonify(response_data), 201
 
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
 
 
 

@@ -286,6 +286,6 @@ def google_login():
         "picture": user_info.get("picture")
     })
 
-    return jsonify(access_token=access_token), 200
+    return jsonify(access_token=access_token), 200      
 
 
