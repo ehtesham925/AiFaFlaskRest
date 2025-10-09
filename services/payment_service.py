@@ -21,7 +21,7 @@ class PaymentService:
     
     def create_checkout_session(self, course, user, payment_id):
         """Create a Stripe checkout session for course payment"""
-        try:
+        try: 
             checkout_session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
                 line_items=[

@@ -1385,7 +1385,7 @@ def allowed_file(filename):
 # Create a Lesson Resource with File Upload
 # -------------------------------
 @course_bp.route("/lesson-resources", methods=["POST"])
-def create_lesson_resource():
+def create_lesson_resource():   
     try:
         # 1️⃣ Extract fields
         lesson_id = request.form.get("lesson_id")
@@ -1479,6 +1479,30 @@ def get_resource(resource_id):
     if not resource:
         return jsonify({"error": "Resource not found"}), 404
     return jsonify(resource.to_dict()), 200
+
+
+# Get resources of a specific lesson
+@course_bp.route("/lesson-resources/lesson/<int:lesson_id>", methods=["GET"])
+def get_resources_from_lesson(lesson_id):
+    # Find the lesson first
+    lesson = Lesson.query.get(lesson_id)
+    if not lesson:
+        return jsonify({"error": "Lesson not found"}), 404
+
+    # Fetch all resources related to this lesson
+    resources = LessonResource.query.filter_by(lesson_id=lesson_id).all()
+
+    # If no resources found
+    if not resources:
+        return jsonify({"message": "No resources found for this lesson"}), 200
+
+    # Convert each resource to dict
+    resource_list = [r.to_dict() for r in resources]
+
+    return jsonify(resource_list), 200
+
+
+
 
 
 
