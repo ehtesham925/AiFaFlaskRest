@@ -12,4 +12,6 @@ flask-cors>=6.0.1
 stripe>=12.3.0
 sqlalchemy>=2.0.42
 python-dotenv==1.0.1
+numpy>=1.23.0,<2.0.0
 opencv-python-headless>=4.6.0,<4.10.0
+
