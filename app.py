@@ -28,6 +28,7 @@ cors = CORS()
 
 FRONTEND_URL_STUDENTS = os.environ.get("FRONTEND_URL_STUDENTS")
 FRONTEND_URL_ADMIN = os.environ.get("FRONTEND_URL_ADMIN")
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)

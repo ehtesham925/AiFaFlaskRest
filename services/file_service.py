@@ -3,6 +3,9 @@ import uuid
 from werkzeug.utils import secure_filename
 from flask import send_file, abort
 import mimetypes
+# from moviepy.editor import VideoFileClip
+import os
+import cv2
 
 class FileService:
     def __init__(self):
@@ -261,3 +264,15 @@ class FileService:
                 'deleted_size': 0,
                 'deleted_size_mb': 0
             }
+    
+
+    def get_video_duration_minutes(file_path):
+        cap = cv2.VideoCapture(file_path)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        cap.release()
+        if fps > 0:
+            duration_seconds = frame_count / fps
+            return round(duration_seconds / 60, 2)
+        return None
+        

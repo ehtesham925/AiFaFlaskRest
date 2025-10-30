@@ -12,13 +12,16 @@ class UserRole(Enum):
 class CourseStatus(Enum):
     DRAFT = "draft"
     PUBLISHED = "published"
-    ARCHIVED = "archived"
 
 class PaymentStatus(Enum):
     PENDING = "pending"
     COMPLETED = "completed"
     FAILED = "failed"
     REFUNDED = "refunded"
+
+class ModeOfConduct(Enum):
+    ONLINE = "online"
+    OFFLINE = "offline"
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -69,16 +72,22 @@ class MasterCategory(db.Model):
     __tablename__ = 'master_categories'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
+    reviews = db.Column(db.Integer,nullable=False,server_default='0')
 
     # one-to-many relationship to subcategories
     subcategories = db.relationship("SubCategory", backref="master_category", cascade="all, delete-orphan")
 
-    def to_dict(self):
-        return {
+    def to_dict(self,include_subcategories=False):
+        response = {
             "id": self.id,
             "name": self.name,
-            "subcategories": [sub.to_dict() for sub in self.subcategories]
+            # "subcategories": [sub.to_dict() for sub in self.subcategories]
         }
+        if include_subcategories:
+            response['subcategories']=[sub.to_dict() for sub in self.subcategories]
+        
+        return response
+    
 
 class SubCategory(db.Model):
     __tablename__ = 'sub_categories'
@@ -90,12 +99,16 @@ class SubCategory(db.Model):
     # one-to-many relationship to courses
     courses = db.relationship("Course", backref="subcategory", cascade="all, delete-orphan")
     
-    def to_dict(self):
-        return {
+    def to_dict(self,include_courses=False):
+        response = {
             "id": self.id,
             "name": self.name,
-            "courses": [c.to_dict() for c in self.courses]
+            # "courses": [c.to_dict() for c in self.courses]
         }
+        if include_courses:
+            response['courses'] = [c.to_dict() for c in self.courses]
+            
+        return response
 
 
 
@@ -134,6 +147,8 @@ class Course(db.Model):
     max_students = db.Column(db.Integer)
     prerequisites = db.Column(db.Text)
     learning_outcomes = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, nullable=True, default=False,server_default='false')
+    mode_of_conduct = db.Column(db.Enum(ModeOfConduct),default=ModeOfConduct.OFFLINE)
     # banner_picture = db.Column(db.String(255),nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -204,6 +219,7 @@ class CourseModule(db.Model):
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
+    duration_minutes = db.Column(db.Integer)
     order = db.Column(db.Integer, nullable=False)
     is_preview = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -236,7 +252,7 @@ class Lesson(db.Model):
     content = db.Column(db.Text)
     video_url = db.Column(db.String(500))
     resource_link = db.Column(db.String(255))
-    duration_minutes = db.Column(db.Integer)
+    duration_minutes = db.Column(db.Integer,default=0)
     order = db.Column(db.Integer, nullable=False)
     is_preview = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -269,6 +285,10 @@ class LessonResource(db.Model):
     file_path = db.Column(db.String(500), nullable=False) # resources pdf, vedio, audio etc 
     file_type = db.Column(db.String(50))  # pdf, video, audio, image, etc.
     file_size = db.Column(db.Integer)
+    is_active = db.Column(db.Boolean, default=False, nullable=False)
+    duration_minutes = db.Column(db.Integer,default=0)
+
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def to_dict(self):
@@ -276,6 +296,7 @@ class LessonResource(db.Model):
             'id': self.id,
             'lesson_id': self.lesson_id,
             'title': self.title,
+            'duration_minutes':self.duration_minutes,
             'file_path': self.file_path,
             'file_type': self.file_type,
             'file_size': self.file_size,

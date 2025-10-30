@@ -1,13 +1,15 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
-from models import Course, CourseModule, Lesson, User, Enrollment, UserRole, CourseStatus,MasterCategory,SubCategory,CoursePrerequisitesCourses
+from models import Course, CourseModule, Lesson, User, Enrollment, UserRole, CourseStatus,MasterCategory,SubCategory,CoursePrerequisitesCourses,ModeOfConduct
 from auth import get_current_user, instructor_required
 from utils.validators import validate_course_data
 from werkzeug.utils import secure_filename
 import uuid 
 import os 
-
+from models import db, LessonResource,CourseModule
+from datetime import datetime
+from services.file_service import FileService
 course_bp = Blueprint('courses', __name__)
 
 
@@ -88,19 +90,19 @@ def get_courses():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@course_bp.route('get-courses/', methods=['GET'])
+@course_bp.route('get-courses/', methods=['POST'])
 def get_courses_all():
     try:
         courses = Course.query.order_by(Course.created_at.desc()).all()
 
         return jsonify({
-            "courses": [course.to_dict(include_modules=True) for course in courses]
+            "courses": [course.to_dict() for course in courses]
         }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-@course_bp.route('/get-courses/<int:subcourse_id>', methods=['GET'])
+@course_bp.route('/get-courses/<int:subcourse_id>', methods=['POST'])
 def get_courses_undersubcourse(subcourse_id):
     try:
         # Get the subcategory first
@@ -217,6 +219,18 @@ def create_course():
     else:
         status = CourseStatus.DRAFT
 
+    if data.get('mode_of_conduct'):
+        try:
+            mode_of_conduct = ModeOfConduct(data['mode_of_conduct'].lower())
+        except Exception as e:
+            return jsonify({'error': f"Invalid mode : {data['mode_of_conduct']}"}), 400
+            
+    else:
+        mode_of_conduct =  ModeOfConduct.OFFLINE
+
+    if status == CourseStatus.PUBLISHED:
+        is_active = True
+
     # Create course
     course = Course(
         title=data.get('title'),
@@ -233,6 +247,8 @@ def create_course():
         prerequisites=data.get('prerequisites'),
         status=status,
         learning_outcomes=data.get('learning_outcomes'),
+        is_active =  is_active,
+        mode_of_conduct =  mode_of_conduct 
     )
 
     db.session.add(course)
@@ -399,7 +415,7 @@ def create_module(course_id):
         
         return jsonify({
             'message': 'Module created successfully',
-            'module': module.to_dict(include_lessons=True)
+            'module': module.to_dict()
         }), 201
         
     except Exception as e:
@@ -407,7 +423,7 @@ def create_module(course_id):
         return jsonify({'error': str(e)}), 500
     
 # get all modules
-@course_bp.route('/modules', methods=['GET'])
+@course_bp.route('/modules', methods=['POST'])
 @instructor_required
 def list_all_modules():
     try:
@@ -427,7 +443,7 @@ def list_all_modules():
             )
 
         return jsonify({
-            "modules": [m.to_dict(include_lessons=True) for m in modules]
+            "modules": [m.to_dict() for m in modules]
         }), 200
 
     except Exception as e:
@@ -436,7 +452,7 @@ def list_all_modules():
 
 # get modules 
 """ get a specific module   """
-@course_bp.route('/<int:course_id>/modules', methods=['GET'])
+@course_bp.route('/<int:course_id>/modules', methods=['POST'])
 @instructor_required
 def list_modules(course_id):
     try:
@@ -552,7 +568,7 @@ def create_lesson(course_id, module_id):
         # Handle form data (supports file + text)
         title = request.form.get('title')
         content = request.form.get('content')
-        duration_minutes = request.form.get('duration_minutes', type=int)
+        # duration_minutes = request.form.get('duration_minutes', type=int)
         is_preview = request.form.get('is_preview', 'false').lower() == 'true'
         video_file = request.files.get('video')
 
@@ -577,7 +593,9 @@ def create_lesson(course_id, module_id):
             video_filename = f"{lesson_name}_{secure_filename(video_file.filename)}"
             video_path = os.path.join(video_folder, video_filename)
             video_file.save(video_path)
-                
+        file_service = FileService()
+
+        duration_minutes = file_service.get_video_duration_minutes(video_path)
         # Case 2: YouTube or remote URL
         # elif request.form.get('video_url'):
         #     video_path = request.form.get('video_url')
@@ -591,7 +609,15 @@ def create_lesson(course_id, module_id):
             order=max_order + 1,
             is_preview=is_preview
         )
+
         db.session.add(lesson)
+        db.session.commit()
+
+        modules = CourseModule.query.all()
+
+        duration_minutes=sum([module.duration_minutes for module in modules ])
+        module.duration_minutes =  duration_minutes
+
         db.session.commit()
 
         return jsonify({
@@ -607,7 +633,7 @@ def create_lesson(course_id, module_id):
 
 # get all lessons in a course (flat list)
 """Get all lessons in a course"""
-@course_bp.route('/<int:course_id>/all-lessons', methods=['GET'])
+@course_bp.route('/<int:course_id>/all-lessons', methods=['POST'])
 @instructor_required
 def list_all_lessons_flat(course_id):
     try:
@@ -633,7 +659,7 @@ def list_all_lessons_flat(course_id):
         return jsonify({
             'course_id': course.id,
             'course_title': course.title,
-            'lessons': [lesson.to_dict(include_resources=True) for lesson in lessons]
+            'lessons': [lesson.to_dict() for lesson in lessons]
         }), 200
 
     except Exception as e:
@@ -843,7 +869,7 @@ def get_course_enrollments(course_id):
 def get_courses_master():
     try:
         data = request.get_json()
-        types = ["published", "draft", "archived"]
+        types = ["published", "draft"]
         status = data.get('status', '').lower()
 
         query = Course.query
@@ -925,7 +951,7 @@ def create_only_master_category():
         return jsonify({"error": str(e)}), 400
 
 """Get master Categories only"""
-@course_bp.route('/only-mastercategories', methods=['GET'])
+@course_bp.route('/only-mastercategories', methods=['POST'])
 def get_master_categories_only():
     try:
         categories = MasterCategory.query.all()
@@ -999,13 +1025,10 @@ def delete_master_category_only(id):
 
 
 """ Master Categories with Subcategories     """
-
-
-
 # base subcategory 
 # get full category → subcategory → courses hierarchy
 """Get all the Master Courses with sub categories  """
-@course_bp.route('mastercategories/', methods=['GET'])
+@course_bp.route('mastercategories/', methods=['POST'])
 def get_master_categories():
     try:
         categories = MasterCategory.query.all()
@@ -1017,37 +1040,38 @@ def get_master_categories():
 
 
 """Get all the Master Course with specific id """
-@course_bp.route("/mastercategories/<int:category_id>", methods=["GET"])
+@course_bp.route("/mastercategories/<int:category_id>", methods=["POST"])
 def get_master_category(category_id):
     try:
         category = MasterCategory.query.get_or_404(category_id)
-        return jsonify(category.to_dict()), 200
+        return jsonify(category.to_dict(include_subcategories=True)), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
 # ✅ GET all master categories with their subcategories
 """Get Master Categories with SubCategories"""
-@course_bp.route("/mastercourses_subcourses", methods=["GET"])
+@course_bp.route("/mastercourses_subcourses", methods=["POST"])
 def get_master_courses():
     try:
         masters = MasterCategory.query.all()
 
-        result = []
-        for master in masters:
-            result.append({
-                "id": master.id,
-                "mastercourse": master.name,
-                "subcategories": [
-                    {"id": sub.id, "name": sub.name} for sub in master.subcategories
-                ]
-            })
+        # result = []
+        # for master in masters:
+        #     result.append({
+        #         "id": master.id,
+        #         "mastercourse": master.name,
+        #         "subcategories": [
+        #             {"id": sub.id, "name": sub.name} for sub in master.subcategories
+        #         ]
+        #     })
 
-        return jsonify(result), 200
+        response = [master.to_dict(include_subcategories=True) for master in masters]
+
+        return jsonify({"master categories ": response}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-# target-1
 # base mastercategory
 # Create MasterCategory with SubCategories
 """Create  Master Courses with sub categories  """
@@ -1057,7 +1081,7 @@ def create_master_category():
         data = request.get_json()
 
         # Create MasterCategory
-        master = MasterCategory(name=data["name"])
+        master = MasterCategory(name=data["name"],reviews=data["reviews"])
         db.session.add(master)
         db.session.flush()  # to get master.id before commit
 
@@ -1090,6 +1114,8 @@ def update_master_category(category_id):
         # Update master category name
         if "name" in data:
             category.name = data["name"]
+        if "reviews" in data:
+            category.reviews = data["reviews"]
 
         # Update subcategories if provided
         if "subcategories" in data:
@@ -1129,7 +1155,6 @@ def delete_master_category(category_id):
         return jsonify({"error": str(e)}), 400
 
 
-# target-2
 # Create SubCategory only
 """Create subCategories """
 @course_bp.route("/only-subcategories", methods=["POST"])
@@ -1167,7 +1192,7 @@ def create_only_subcategory():
 
 # ✅ GET all subcategories
 """Get All Subcategories with courses"""
-@course_bp.route("/only-subcategories", methods=["GET"])
+@course_bp.route("/only-subcategories", methods=["POST"])
 def get_all_subcategories():
     try:
         subcategories = SubCategory.query.all()
@@ -1182,7 +1207,7 @@ def get_all_subcategories():
 def get_subcategory(subcategory_id):
     try:
         subcategory = SubCategory.query.get_or_404(subcategory_id)
-        return jsonify(subcategory.to_dict()), 200
+        return jsonify(subcategory.to_dict(include_courses=True)), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -1338,7 +1363,7 @@ def create_course_subcategory():
 
 
 """Get All Courses Details"""
-@course_bp.route("/categories-with-courses", methods=["GET"])
+@course_bp.route("/categories-with-courses", methods=["PUT"])
 def get_categories_with_courses():
     try:
         categories = MasterCategory.query.all()
@@ -1364,11 +1389,6 @@ def get_categories_with_courses():
 
 
 
-
-import os
-from werkzeug.utils import secure_filename
-from models import db, LessonResource,CourseModule
-from datetime import datetime
 
 
 # Folder to save uploads
@@ -1437,9 +1457,9 @@ def create_lesson_resource():
             created_at=datetime.utcnow()
         )
 
-        db.session.add(resource)
+        db.session.add(resource) 
         db.session.commit()
-
+    
         # Optional: Include course/module details in response
         response_data = resource.to_dict()
         response_data.update({
@@ -1460,7 +1480,7 @@ def create_lesson_resource():
 # -------------------------------
 # READ ALL (GET)
 # -------------------------------
-@course_bp.route("/lesson-resources", methods=["GET"])
+@course_bp.route("/lesson-resources", methods=["POST"])
 def get_all_resources():
     try:
         resources = LessonResource.query.all()
